@@ -28,6 +28,10 @@ A self-improving customer support agent built on **Hermes Agent**. It handles re
 ## How it improves over time
 After each resolved ticket, the agent evaluates the interaction, extracts a reusable pattern, and stores it as a skill. Over weeks of use, response quality and resolution speed should compound rather than reset each session.
 
+## Project docs
+- [Implementation plan](docs/PLAN.md) — architecture, phased build, risks, open decisions
+- [ADR 0001](docs/adr/0001-runtime-nemoclaw-hermes.md) — why Hermes Agent runs under the NVIDIA NemoClaw blueprint
+
 ## Notes
 - Not intended to fully replace human support — best for high-volume, low-complexity, repeatable tickets.
 - Review the skill library periodically to catch bad patterns before they compound.
