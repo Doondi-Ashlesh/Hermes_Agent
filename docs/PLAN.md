@@ -5,6 +5,9 @@ Runtime rationale and trade-offs: [ADR 0001](adr/0001-runtime-nemoclaw-hermes.md
 
 ## Architecture
 
+Rendered diagrams — system context, components, trust boundaries, ticket and skill lifecycles —
+are in [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ```
   ticket source (inbox / ticketing API)
             |
