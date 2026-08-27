@@ -8,10 +8,13 @@ This document is the target architecture, not a description of what is built tod
 are annotated with the phase that introduces them.
 
 **What exists now:** the [inbox agent](INBOX_AGENT.md) implements the ingestion adapter,
-redaction pass, classifier, policy gate, and eval harness against a personal mailbox rather
-than a ticket source — the same boxes below, wired to data that exists. It runs outside the
-NemoClaw sandbox by design (read-only credentials, no outbound send path); see that document
-for when the sandbox starts earning its cost.
+redaction pass, classifier, policy gate, notifier, correction loop, and eval harness against
+a personal mailbox rather than a ticket source — the same boxes below, wired to data that
+exists. It runs outside the NemoClaw sandbox by design (read-only credentials, no outbound
+send path); see that document for when the sandbox starts earning its cost, and
+[DECISIONS.md](DECISIONS.md) for why each choice was made.
+
+Section 8 maps the shipped module layout onto these diagrams.
 
 ## 1. System context
 
@@ -71,7 +74,7 @@ flowchart TB
         rules["Deterministic rules<br/><i>thresholds, categories,<br/>sentiment, confidence floor</i>"]
     end
 
-    infer["Routed inference<br/><i>NemoClaw holds credentials</i>"]
+    infer["Inference<br/><i>provider registry:<br/>anthropic · ollama · offline</i>"]
     draft["Draft response"]
     queue["Escalation queue"]
     human["Human review<br/><i>shadow mode — Phase 5</i>"]
@@ -205,7 +208,7 @@ stateDiagram-v2
 Every skill carries provenance and a review date. There is deliberately no auto-promotion edge
 in this diagram.
 
-## 6. Repository layout
+## 6. Repository layout (target)
 
 How the [target layout](PLAN.md#repository-layout-target) maps onto the components above.
 
@@ -220,10 +223,73 @@ flowchart LR
     docsd["docs/"] --> c7["Plan, ADRs, runbooks"]
 ```
 
-## 7. Build order
+## 7. Shipped module layout
 
-Phase dependencies. Each phase has an exit criterion in [PLAN](PLAN.md#phases); do not start a
-phase until its predecessor's criterion is met.
+What the code actually looks like today, against the boxes in section 2.
+
+```mermaid
+flowchart TB
+    subgraph ingest["Ingestion"]
+        i1["sources/base.py<br/><i>MailSource protocol</i>"]
+        i2["sources/imap.py<br/><i>readonly + BODY.PEEK</i>"]
+        i3["sources/fixtures.py<br/><i>offline mailbox</i>"]
+        i1 -.-> i2
+        i1 -.-> i3
+    end
+
+    subgraph brain["Judgement"]
+        r["redact.py"]
+        p1["providers.py<br/><i>registry</i>"]
+        p2["classify.py<br/><i>anthropic</i>"]
+        p3["ollama.py<br/><i>local</i>"]
+        p4["offline.py<br/><i>keyword rules</i>"]
+        r --> p1
+        p1 -.-> p2
+        p1 -.-> p3
+        p1 -.-> p4
+    end
+
+    subgraph decide["Policy"]
+        g["gate.py<br/><i>6 deterministic rules</i>"]
+    end
+
+    subgraph out["Delivery + learning"]
+        n1["notify/base.py<br/><i>Notifier protocol</i>"]
+        n2["notify/telegram.py<br/><i>alerts + buttons</i>"]
+        n3["notify/console.py"]
+        f["feedback.py<br/><i>labeled examples</i>"]
+        e["evals.py<br/><i>leave-one-out</i>"]
+        n1 -.-> n2
+        n1 -.-> n3
+    end
+
+    a["agent.py<br/><i>run loop</i>"]
+    st["state.py<br/><i>cursor + decision log</i>"]
+
+    ingest --> r
+    p1 --> g
+    g --> a
+    a --> n1
+    n2 -->|button press| f
+    f -->|corrections in prompt| p1
+    f --> e
+    e -.->|scores| p1
+    a <--> st
+
+    classDef seam fill:#eef3fb,stroke:#456,color:#000
+    class ingest,brain,out seam
+```
+
+Dotted edges are interchangeable implementations behind one protocol. Each seam has at
+least two, which is the only real evidence that a seam works.
+
+## 8. Build order
+
+Phase dependencies for the support-agent track. Each phase has an exit criterion in
+[PLAN](PLAN.md#phases); do not start a phase until its predecessor's criterion is met.
+
+The inbox agent runs alongside this rather than inside it — it deliberately does not wait on
+Phase 0 (see [D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)).
 
 ```mermaid
 flowchart LR

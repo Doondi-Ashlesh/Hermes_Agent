@@ -3,6 +3,21 @@
 Support agent on Hermes Agent, deployed under the NVIDIA NemoClaw blueprint.
 Runtime rationale and trade-offs: [ADR 0001](adr/0001-runtime-nemoclaw-hermes.md).
 
+## Status — 2026-08-27
+
+| Track | State |
+|---|---|
+| [Inbox agent](INBOX_AGENT.md) | **Shipped and runnable.** Ingestion, redaction, classification, policy gate, notification, correction loop, eval harness |
+| Support agent (phases below) | Phase 0 not started; blocked on three ADR questions, not on hardware |
+
+The inbox agent is the same architecture pointed at a personal mailbox instead of a ticket
+source — it exists because the support use case needs production ticket data that does not
+yet exist, and because it supplies both live traffic and the historical corpus that open
+decision 4 below lists as unknown. It runs **outside** the NemoClaw sandbox deliberately;
+see [D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now).
+
+Reasoning, corrections, and known failures for both tracks: [DECISIONS.md](DECISIONS.md).
+
 ## Architecture
 
 Rendered diagrams — system context, components, trust boundaries, ticket and skill lifecycles —
@@ -64,6 +79,10 @@ docs/            plan, ADRs, runbooks
 Each phase has an exit criterion. Do not start the next phase until it is met.
 
 ### Phase 0 — Blueprint spike
+
+> **Partially unblocked.** Two of ADR 0001's five questions are answered
+> ([amendment](adr/0001-runtime-nemoclaw-hermes.md#amendment-2026-08-27)); Q3–Q5 remain and
+> are answerable from NemoClaw's committed `docs/**/*.mdx`.
 
 Resolve the open questions in ADR 0001 against NVIDIA's primary documentation, then stand up
 the stock blueprint with no customization: NemoClaw installed, Hermes running under OpenShell,
@@ -156,10 +175,17 @@ each with an independent kill switch and an automatic rollback trigger on score 
 
 ## Decisions still open
 
-1. **Ticket source** — blocks Phase 1. Email, Zendesk, or something else.
-2. **Model** — constrained by which providers NemoClaw's routed inference supports (ADR 0001, Q2).
-3. **Hosting** — constrained by NemoClaw prerequisites (ADR 0001, Q1).
+1. **Ticket source** — blocks Phase 1. Email, Zendesk, or something else. *(The inbox agent
+   answers this for its own track: IMAP, see [D-002](DECISIONS.md#d-002--imap-before-the-gmail-api).)*
+2. ~~**Model**~~ — **resolved 2026-08-27.** NemoClaw's routed inference supports Anthropic,
+   OpenAI, Gemini, OpenRouter and NVIDIA endpoints, plus local serving via Ollama / llama.cpp /
+   vLLM / NIM ([ADR 0001 amendment](adr/0001-runtime-nemoclaw-hermes.md#amendment-2026-08-27)).
+   No longer a constraint; a preference.
+3. ~~**Hosting**~~ — **resolved 2026-08-27.** The floor is 4 vCPU / 8 GB RAM / 20 GB disk with
+   no local GPU required, not DGX-class as originally recorded
+   ([F-006](DECISIONS.md#f-006--adr-0001-claimed-dgx-class-hardware-was-required)).
 4. **Historical ticket access** — Phase 4 needs a corpus of resolved tickets; availability and
-   volume are unknown.
+   volume are unknown. *(The inbox agent sidesteps this: the user's own sent mail is the
+   corpus.)*
 5. **Retention** — how long per-customer memory persists, and the deletion path when a customer
    requests erasure.
