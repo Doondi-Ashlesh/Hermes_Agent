@@ -2,6 +2,15 @@
 
 A self-improving customer support agent built on **Hermes Agent**. It handles recurring support workflows and gets better at your product's specific issues over time.
 
+> **Runnable today: the [inbox agent](docs/INBOX_AGENT.md).** The support use case
+> below needs production ticket data. The inbox agent needs a mailbox you already
+> own — it watches your mail, pings you on Telegram only when something matters,
+> and learns from the corrections you give it.
+>
+> ```bash
+> pip install -e . && hermes-inbox demo   # no credentials needed
+> ```
+
 ## What it does
 - Triages incoming support tickets and drafts/sends responses for common issues
 - Builds a persistent profile per customer (history, preferences, past complaints)
@@ -29,6 +38,7 @@ A self-improving customer support agent built on **Hermes Agent**. It handles re
 After each resolved ticket, the agent evaluates the interaction, extracts a reusable pattern, and stores it as a skill. Over weeks of use, response quality and resolution speed should compound rather than reset each session.
 
 ## Project docs
+- [Inbox agent](docs/INBOX_AGENT.md) — the deployable use case: setup, commands, how the correction loop works
 - [Architecture](docs/ARCHITECTURE.md) — diagrams: system context, components, trust boundaries, lifecycles
 - [Implementation plan](docs/PLAN.md) — architecture, phased build, risks, open decisions
 - [ADR 0001](docs/adr/0001-runtime-nemoclaw-hermes.md) — why Hermes Agent runs under the NVIDIA NemoClaw blueprint

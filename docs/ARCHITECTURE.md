@@ -7,6 +7,12 @@ delivered in phases ([PLAN](PLAN.md)).
 This document is the target architecture, not a description of what is built today. Components
 are annotated with the phase that introduces them.
 
+**What exists now:** the [inbox agent](INBOX_AGENT.md) implements the ingestion adapter,
+redaction pass, classifier, policy gate, and eval harness against a personal mailbox rather
+than a ticket source — the same boxes below, wired to data that exists. It runs outside the
+NemoClaw sandbox by design (read-only credentials, no outbound send path); see that document
+for when the sandbox starts earning its cost.
+
 ## 1. System context
 
 Who talks to the system, and across which boundary.
