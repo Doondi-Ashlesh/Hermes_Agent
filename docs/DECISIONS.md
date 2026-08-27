@@ -65,6 +65,16 @@ needed quoting. Now a standing rule in `CLAUDE.md`.
 
 ## Decisions
 
+### D-012 · The product is the machinery, not either deployment
+**Why:** the repo said "customer support agent" and shipped an inbox agent. Measured the
+split — ~766 loc source-agnostic vs ~382 mail-flavoured, of which only `imap.py` (97 loc)
+is truly source-bound. The two differ in the *verb* (judge vs draft) and the *action*
+(notify vs send), not in the pipeline.
+**Rejected:** keeping support as the headline (README would describe something that
+doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still applies to both).
+**✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
+Track A running, Track B blocked on tickets and a write scope.
+
 ### D-011 · Docs written for replication, and tested
 **Why:** the docs explained *what* and *why* but a new engineer couldn't rebuild or
 extend without reverse-engineering. Added `SETUP.md` (verify step per stage),

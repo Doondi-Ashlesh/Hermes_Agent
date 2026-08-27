@@ -1,21 +1,30 @@
 # Architecture
 
-Diagrams for the support agent described in [`README.md`](../README.md), built on Hermes Agent
-under the NVIDIA NemoClaw blueprint ([ADR 0001](adr/0001-runtime-nemoclaw-hermes.md)) and
-delivered in phases ([PLAN](PLAN.md)).
+Diagrams for Hermes Agent ([`README.md`](../README.md)), running under the NVIDIA NemoClaw
+blueprint ([ADR 0001](adr/0001-runtime-nemoclaw-hermes.md)) and earning autonomy in phases
+([PLAN](PLAN.md)).
 
-This document is the target architecture, not a description of what is built today. Components
-are annotated with the phase that introduces them.
+**Two deployments share these diagrams.** Sections 1–5 are drawn for the support agent
+(Track B) — the more demanding case, because it drafts and sends. The inbox agent (Track A)
+is the same shape with two substitutions:
 
-**What exists now:** the [inbox agent](INBOX_AGENT.md) implements the ingestion adapter,
-redaction pass, classifier, policy gate, notifier, correction loop, and eval harness against
-a personal mailbox rather than a ticket source — the same boxes below, wired to data that
-exists. It runs outside the NemoClaw sandbox by design (read-only credentials, no outbound
-send path); see that document for when the sandbox starts earning its cost, and
-[DECISIONS.md](DECISIONS.md) for why each choice was made.
+| In the diagrams | Track A reads it as |
+|---|---|
+| Ticket source | IMAP mailbox |
+| Draft response | Importance verdict |
+| Send / escalate | Notify / stay silent |
+| Skill library | Your accumulated corrections |
+
+**What exists now:** Track A — the [inbox agent](INBOX_AGENT.md) — implements the ingestion adapter, redaction pass, judgement,
+policy gate, notifier, correction loop, and eval harness — the same boxes below, wired to
+data that exists. It runs outside the NemoClaw sandbox by design: read-only credentials, no
+outbound send path, so the sandbox is not yet earning its cost
+([D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)). Track B needs a
+write scope, and that is the point at which the sandbox becomes load-bearing.
 
 Section 7 maps the shipped module layout onto these diagrams. To run it, see
-[SETUP.md](SETUP.md); to change it, [EXTENDING.md](EXTENDING.md).
+[SETUP.md](SETUP.md); to change it, [EXTENDING.md](EXTENDING.md); for why any of it is the
+way it is, [DECISIONS.md](DECISIONS.md).
 
 ## 1. System context
 
@@ -43,9 +52,10 @@ flowchart LR
     class human trusted
 ```
 
-Ticket text is attacker-controlled input. Everything downstream of `source` treats it as data,
-never as instructions — the reason the enforcement boundary sits below the agent rather than
-inside its prompt.
+Inbound text is attacker-controlled — a ticket is written by a stranger, and so is most email.
+Everything downstream of `source` treats it as data, never as instructions, which is why the
+enforcement boundary sits below the agent rather than inside its prompt. Both deployments ship
+an adversarial fixture that tries to talk the agent out of its rules.
 
 ## 2. Component architecture
 
@@ -286,11 +296,14 @@ least two, which is the only real evidence that a seam works.
 
 ## 8. Build order
 
-Phase dependencies for the support-agent track. Each phase has an exit criterion in
+Phase dependencies for Track B, the support agent. Each phase has an exit criterion in
 [PLAN](PLAN.md#phases); do not start a phase until its predecessor's criterion is met.
 
-The inbox agent runs alongside this rather than inside it — it deliberately does not wait on
-Phase 0 (see [D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)).
+Track A runs alongside this rather than inside it, and has already cleared the substance of
+phases 1–5 against its own source — see the mapping table in
+[PLAN](PLAN.md#status--2026-08-27). It skips Phase 0 deliberately: with no write scope, there
+is nothing for the sandbox to contain
+([D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)).
 
 ```mermaid
 flowchart LR

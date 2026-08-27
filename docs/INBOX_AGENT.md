@@ -1,13 +1,13 @@
-# Inbox agent — the deployable use case
+# Inbox agent — deployment 1
 
-The support-bot use case in [`README.md`](../README.md) needs production ticket
-data to be worth anything. This one needs a mailbox you already own, which makes
-it the first thing in this repo you can actually run.
+The first of the two deployments in [`README.md`](../README.md), and the one that
+runs today. It needs a mailbox you already own rather than the production ticket
+data the support agent is waiting on.
 
-It is the same architecture. [ADR 0001](adr/0001-runtime-nemoclaw-hermes.md)'s
-first boundary promises that "swapping Zendesk for email must not touch agent
-code" — this is that swap, and every box in
-[`ARCHITECTURE.md`](ARCHITECTURE.md) keeps its shape.
+It is the shared machinery with a mail source and a notify action.
+[ADR 0001](adr/0001-runtime-nemoclaw-hermes.md)'s first boundary promises that
+"swapping Zendesk for email must not touch agent code" — this is that swap, and
+every box in [`ARCHITECTURE.md`](ARCHITECTURE.md) keeps its shape.
 
 ## What it does
 

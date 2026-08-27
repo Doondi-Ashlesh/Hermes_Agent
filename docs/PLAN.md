@@ -1,22 +1,49 @@
 # Implementation Plan
 
-Support agent on Hermes Agent, deployed under the NVIDIA NemoClaw blueprint.
-Runtime rationale and trade-offs: [ADR 0001](adr/0001-runtime-nemoclaw-hermes.md).
+Hermes Agent under the NVIDIA NemoClaw blueprint. Runtime rationale and trade-offs:
+[ADR 0001](adr/0001-runtime-nemoclaw-hermes.md).
+
+## Two deployments, one phase model
+
+The project ships one piece of machinery with two deployments
+([README](../README.md)). Both earn autonomy the same way — the phases below are a
+trust ladder, not a build order for a single product.
+
+| | Track A — inbox agent | Track B — support agent |
+|---|---|---|
+| Source | IMAP mailbox | Ticket system |
+| Judgement | Importance | A drafted reply |
+| Gate decides | Notify / silent | Send / hold / escalate |
+| Write scope | Not needed | **Required** |
+| Sandbox | Not yet load-bearing ([D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)) | Load-bearing from day one |
+| Status | **Running** | Not started |
 
 ## Status — 2026-08-27
 
-| Track | State |
-|---|---|
-| [Inbox agent](INBOX_AGENT.md) | **Shipped and runnable.** Ingestion, redaction, classification, policy gate, notification, correction loop, eval harness |
-| Support agent (phases below) | Phase 0 not started; blocked on three ADR questions, not on hardware |
+**Track A** has the machinery built and running: ingestion, redaction, judgement,
+policy gate, notification, correction loop, eval harness. What remains is
+validation — every accuracy claim is against 12 fixtures until it has scored a real
+mailbox ([O-003](DECISIONS.md#o-003--not-validated-against-real-mail)).
 
-The inbox agent is the same architecture pointed at a personal mailbox instead of a ticket
-source — it exists because the support use case needs production ticket data that does not
-yet exist, and because it supplies both live traffic and the historical corpus that open
-decision 4 below lists as unknown. It runs **outside** the NemoClaw sandbox deliberately;
-see [D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now).
+**Track B** has not started. It is blocked on two things, and neither is the runtime:
+a corpus of real tickets, and the write scope that drafting requires. Phase 0 is
+additionally waiting on three ADR questions — no longer on hardware
+([F-006](DECISIONS.md#f-006--adr-0001-claimed-dgx-class-hardware-was-required)).
 
-Reasoning, corrections, and known failures for both tracks: [DECISIONS.md](DECISIONS.md).
+Because Track A shares the phase model, it has already cleared the substance of
+several phases against its own source:
+
+| Phase | Track B (tickets) | Track A (mail) |
+|---|---|---|
+| 0 — Blueprint spike | Not started | Deliberately skipped; no write scope to sandbox |
+| 1 — Ingestion | Not started | ✅ `Message`, `sources/`, `redact.py` |
+| 2 — Seed skills | Not started | ✅ Corrections are proposals; you promote by labeling |
+| 3 — Policy gate | Not started | ✅ `gate.py`, adversarial fixture passing |
+| 4 — Eval harness | Not started | ✅ `evals.py`, leave-one-out |
+| 5 — Shadow mode | Not started | ✅ Read-only by construction — no send path to gate |
+| 6 — Gated autosend | Not started | N/A — nothing to send |
+
+Reasoning, corrections and known failures for both tracks: [DECISIONS.md](DECISIONS.md).
 
 ## Architecture
 
@@ -77,6 +104,9 @@ docs/            plan, ADRs, runbooks
 ## Phases
 
 Each phase has an exit criterion. Do not start the next phase until it is met.
+
+Written for Track B, since that is the track with autonomy to earn. Track A's
+mapping is in the status table above; where a phase says "ticket", read "message".
 
 ### Phase 0 — Blueprint spike
 
