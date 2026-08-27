@@ -95,11 +95,16 @@ class Agent:
             try:
                 verdict = self.classify_fn(message, examples, self.config, client=self.client)
             except Exception as exc:
-                # An unclassifiable message is surfaced, not dropped — the
-                # default is always to involve the human.
-                result.errors.append(f"classify failed for {message.uid}: {exc}")
-                self.state.set_last_uid(self.source.name, message.uid)
-                continue
+                # Stop the cycle rather than skipping the message. Advancing past
+                # an unclassified message would mark it seen forever, so a provider
+                # outage would silently swallow a whole mailbox. Leaving the
+                # cursor put means the next cycle retries; the error is reported
+                # every time until it clears, which is the loud failure we want.
+                result.errors.append(
+                    f"classify failed for {message.uid} ({exc}) — stopping this cycle,"
+                    f" {result.fetched - len(result.errors)} message(s) left for the next one"
+                )
+                break
 
             gate = decide(message, verdict, self.config.gate)
             decision = Decision(message=message, verdict=verdict, gate=gate)

@@ -120,6 +120,61 @@ Senders match as a full address (`a@b.com`) or a bare domain (`b.com`).
   talk the agent into flagging itself as important. It scores 0.02 as spam, and
   a test asserts that.
 
+## Choosing a provider
+
+The classifier is a seam. Three implementations ship:
+
+| `HERMES_PROVIDER` | Cost | Learns from corrections | Notes |
+|---|---|---|---|
+| `anthropic` *(default)* | ~$9–30/mo | yes | Best judgement and injection resistance |
+| `ollama` | free, local | yes, less reliably | Needs `ollama serve`; nothing leaves your machine |
+| `offline` | free | **no** | Keyword rules. Demos and CI only |
+| `auto` | — | — | `anthropic` if a key is set, else `offline` |
+
+```bash
+HERMES_PROVIDER=ollama HERMES_OLLAMA_MODEL=qwen2.5:7b hermes-inbox once
+```
+
+### What it costs
+
+Measured against this prompt: **~2,200 input tokens, ~150 output** per email.
+At 100 emails/day:
+
+| Model | Uncached | Cached | Min. prefix to cache |
+|---|---|---|---|
+| Opus 5 | $44/mo | $30/mo | 512 tok |
+| **Sonnet 5** *(default)* | $18/mo | **$12/mo** | 1,024 tok |
+| Haiku 4.5 | $9/mo | *cannot cache* | 4,096 tok |
+
+Two things are worth knowing before optimizing this:
+
+**Haiku 4.5 cannot cache this prompt.** Its minimum cacheable prefix is 4,096
+tokens and ours is ~2,200. Below the minimum, caching silently does nothing —
+no error, just `cache_creation_input_tokens: 0`. That closes the gap between
+Haiku and Sonnet 5 to about $3/month, which is why the default is Sonnet 5: the
+correction loop is in-context learning, and that is precisely the capability
+that rewards the better model.
+
+**Caching pays off with request density, not volume.** At ~4 emails/hour you pay
+a 2× cold write to amortize over ~3 reads, so a 1-hour TTL saves about a third
+rather than the ~90% headline. It earns much more during `hermes-inbox eval`,
+which replays every correction back-to-back and hits a warm cache every time.
+
+Set `HERMES_MODEL` to override, and `HERMES_EFFORT=low` to cut spend further.
+
+### Deciding empirically
+
+Do not take the table above on faith for *your* mail. Label ~30 messages, then
+score each provider against the same corrections:
+
+```bash
+hermes-inbox eval --provider anthropic
+hermes-inbox eval --provider ollama
+```
+
+Compare **recall**. That is what the harness is for: it turns "is the cheap model
+good enough" into a number instead of an argument.
+
 ## Do you need NemoClaw for this?
 
 Not for what is here. The blast radius of this agent is "sends you a Telegram
@@ -147,7 +202,7 @@ the only real proof that a seam works:
 |---|---|---|
 | Mail source | `sources/base.py::MailSource` | `ImapSource`, `FixtureSource` |
 | Notifier | `notify/base.py::Notifier` | `TelegramNotifier`, `ConsoleNotifier` |
-| Classifier | `classify.py::classify` | Claude, `offline.py` heuristics |
+| Classifier | `providers.py::resolve` | Anthropic, Ollama, offline heuristics |
 
 **WhatsApp instead of Telegram:** implement `send` and `poll_feedback` behind
 `Notifier` and nothing upstream changes. Telegram is first only because a bot
@@ -172,3 +227,47 @@ against data you have rather than data you don't:
 | 5 | Shadow mode | Read-only by construction — there is no send path to gate |
 
 Phase 0 (NemoClaw) is deliberately **not** a prerequisite here; see above.
+
+
+## Phase status
+
+**This phase is done.** What it delivers, and what it deliberately does not:
+
+| | |
+|---|---|
+| ✅ Ingestion | IMAP (read-only) + fixtures behind one `MailSource` protocol |
+| ✅ Redaction | Cards, phones, OTPs, API keys, URL credentials — before the model |
+| ✅ Classification | Three providers behind one seam, schema-constrained output |
+| ✅ Policy gate | Six deterministic rules; human rules beat the model score |
+| ✅ Notification | Telegram with feedback buttons, console fallback |
+| ✅ Correction loop | Button press → labeled example → next prompt |
+| ✅ Eval harness | Leave-one-out replay, precision/recall |
+| ❌ Reply drafting | Needs a write scope — see the NemoClaw section above |
+| ❌ Sandbox | Not yet earning its cost; arrives with the write scope |
+| ❌ WhatsApp | `Notifier` seam is ready; Telegram first for setup speed |
+
+### Known limits
+
+- **Polling, not push.** 60s latency by default. IMAP IDLE would cut that at the
+  cost of a reconnect state machine.
+- **A permanently unclassifiable message blocks the cursor.** On a classify
+  failure the cycle stops without advancing, so an outage cannot silently
+  swallow mail. The trade is that a genuinely poisonous message would stall the
+  queue — loudly, in the error output, every cycle.
+- **Corrections grow unboundedly.** `HERMES_MAX_EXAMPLES` (default 40) caps what
+  reaches the prompt, newest first. There is no pruning or clustering yet.
+- **No per-sender memory.** Every message is judged independently; the customer
+  profile in `ARCHITECTURE.md` is not built.
+
+### Next phase
+
+Pick one, in rough order of value:
+
+1. **Run it on real mail for a week.** Everything above is theory until it has
+   scored your actual inbox. Collect 30+ corrections, then run `eval` — that
+   number decides everything below.
+2. **Per-sender memory.** The biggest accuracy win available: "this person has
+   emailed me four times and I replied every time" is a stronger signal than
+   anything in the message body.
+3. **Reply drafting**, which is where the sandbox and Phase 0 finally become
+   load-bearing.

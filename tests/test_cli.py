@@ -91,14 +91,14 @@ def test_bulk_headers_weight_a_score_down():
 
 
 def test_demo_runs_clean(capsys):
-    assert main(["demo", "--offline", "--data-dir", "data/demo"]) == 0
+    assert main(["demo", "--provider", "offline", "--data-dir", "data/demo"]) == 0
     out = capsys.readouterr().out
     assert "12 fixture messages" in out
     assert "would have interrupted you" in out
 
 
 def test_once_with_fixtures(capsys):
-    assert main(["once", "--fixtures", "--console", "--offline"]) == 0
+    assert main(["once", "--fixtures", "--console", "--provider", "offline"]) == 0
     assert "fetched" in capsys.readouterr().out
 
 
@@ -108,13 +108,13 @@ def test_stats_before_any_run(capsys):
 
 
 def test_feedback_then_eval_then_stats(capsys):
-    main(["once", "--fixtures", "--console", "--offline"])
+    main(["once", "--fixtures", "--console", "--provider", "offline"])
     capsys.readouterr()
 
     assert main(["feedback", "104", "not-important", "--note", "never ping me for sales"]) == 0
     assert "not important" in capsys.readouterr().out
 
-    assert main(["eval", "--offline"]) == 0
+    assert main(["eval", "--provider", "offline"]) == 0
     assert "Replayed 1 labeled example" in capsys.readouterr().out
 
     assert main(["stats"]) == 0
@@ -129,11 +129,11 @@ def test_feedback_for_unknown_uid_exits_nonzero(capsys):
 
 
 def test_threshold_override_changes_notification_count(capsys):
-    main(["once", "--fixtures", "--console", "--offline", "--threshold", "0.99"])
+    main(["once", "--fixtures", "--console", "--provider", "offline", "--threshold", "0.99"])
     strict = capsys.readouterr().out
     assert "0 notified" in strict
 
 
 def test_eval_with_no_corrections(capsys):
-    assert main(["eval", "--offline"]) == 0
+    assert main(["eval", "--provider", "offline"]) == 0
     assert "No labeled examples" in capsys.readouterr().out

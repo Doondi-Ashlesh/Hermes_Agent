@@ -73,26 +73,40 @@ SCHEMA = {
 }
 
 
-def build_prompt(message: Message, examples: Sequence[Example]) -> str:
-    """Assemble the user turn: corrections first, then the message itself."""
-    parts: list[str] = []
+def build_system(examples: Sequence[Example], ttl: str = "1h") -> list[dict]:
+    """The cacheable prefix: standing rules, then your corrections.
+
+    Corrections live here rather than in the user turn because caching is a
+    prefix match — anything after the last breakpoint is re-billed at full price
+    on every call, and the corrections block is by far the largest part of the
+    prompt. It only changes when you actually correct something.
+
+    Caching is worth most where requests are dense (`hermes-inbox eval`, or a
+    busy mailbox). On a quiet inbox polled once a minute the entries often
+    expire between messages; see docs/INBOX_AGENT.md for the arithmetic.
+    """
+    blocks: list[dict] = [{"type": "text", "text": SYSTEM}]
     if examples:
-        parts.append(EXAMPLES_PREAMBLE)
-        parts.append(render_examples(examples))
-        parts.append("---")
-    parts.append("Classify this message:")
-    parts.append(
-        "\n".join(
-            [
-                f"From: {message.sender_name or ''} <{message.sender}>".strip(),
-                f"Subject: {message.subject}",
-                f"Received: {message.received_at.isoformat()}",
-                "",
-                message.snippet(2000),
-            ]
+        blocks.append(
+            {"type": "text", "text": EXAMPLES_PREAMBLE + "\n\n" + render_examples(examples)}
         )
+    blocks[-1]["cache_control"] = {"type": "ephemeral", "ttl": ttl}
+    return blocks
+
+
+def build_user(message: Message) -> str:
+    """The volatile part: one message, and nothing that could be cached."""
+    return "\n".join(
+        [
+            "Classify this message:",
+            "",
+            f"From: {message.sender_name or ''} <{message.sender}>".strip(),
+            f"Subject: {message.subject}",
+            f"Received: {message.received_at.isoformat()}",
+            "",
+            message.snippet(2000),
+        ]
     )
-    return "\n\n".join(parts)
 
 
 def classify(
@@ -112,8 +126,8 @@ def classify(
     kwargs = {
         "model": config.model,
         "max_tokens": 1024,
-        "system": [{"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}],
-        "messages": [{"role": "user", "content": build_prompt(safe, examples)}],
+        "system": build_system(examples, ttl=config.cache_ttl),
+        "messages": [{"role": "user", "content": build_user(safe)}],
         "output_config": {"format": {"type": "json_schema", "schema": SCHEMA}},
     }
     if config.effort:

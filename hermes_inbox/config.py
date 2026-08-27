@@ -10,7 +10,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "claude-sonnet-5"
+DEFAULT_OLLAMA_MODEL = "qwen2.5:7b"
 DEFAULT_INTERVAL = 60
 DEFAULT_THRESHOLD = 0.7
 
@@ -84,11 +85,17 @@ class GateConfig:
 
 @dataclass
 class Config:
+    provider: str = "auto"
     model: str = DEFAULT_MODEL
     effort: str | None = None
+    cache_ttl: str = "1h"
     interval: int = DEFAULT_INTERVAL
     data_dir: Path = Path("data")
     max_examples: int = 40
+
+    ollama_host: str = "http://localhost:11434"
+    ollama_model: str = DEFAULT_OLLAMA_MODEL
+    ollama_timeout: int = 120
 
     imap_host: str = ""
     imap_port: int = 993
@@ -105,8 +112,13 @@ class Config:
     def from_env(cls) -> "Config":
         load_dotenv()
         return cls(
+            provider=os.environ.get("HERMES_PROVIDER", "auto"),
             model=os.environ.get("HERMES_MODEL", DEFAULT_MODEL),
             effort=os.environ.get("HERMES_EFFORT") or None,
+            cache_ttl=os.environ.get("HERMES_CACHE_TTL", "1h"),
+            ollama_host=os.environ.get("HERMES_OLLAMA_HOST", "http://localhost:11434"),
+            ollama_model=os.environ.get("HERMES_OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
+            ollama_timeout=_int("HERMES_OLLAMA_TIMEOUT", 120),
             interval=_int("HERMES_INTERVAL", DEFAULT_INTERVAL),
             data_dir=Path(os.environ.get("HERMES_DATA_DIR", "data")),
             max_examples=_int("HERMES_MAX_EXAMPLES", 40),

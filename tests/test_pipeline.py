@@ -260,18 +260,44 @@ def test_cycle_is_idempotent(tmp_path):
     assert second.notified == 0
 
 
-def test_classifier_failure_does_not_stall_the_loop(tmp_path):
+def test_classifier_failure_stops_the_cycle_without_losing_mail(tmp_path):
+    """A provider outage must never mark unclassified mail as seen."""
+    calls: list[str] = []
+
     def explode(message, examples, config, client=None):
+        calls.append(message.uid)
         if message.uid == "103":
             raise RuntimeError("provider down")
         return make_verdict(0.9)
 
-    notifier = StubNotifier()
-    agent = make_agent(tmp_path, notifier, explode)
+    agent = make_agent(tmp_path, StubNotifier(), explode)
     result = agent.cycle()
 
     assert any("103" in e for e in result.errors)
-    assert result.notified == 11  # every other message still processed
+    assert calls == ["101", "102", "103"]  # stopped, did not grind through the rest
+    assert agent.state.last_uid("fixtures") == "102"  # cursor left before the failure
+
+
+def test_a_failed_message_is_retried_on_the_next_cycle(tmp_path):
+    attempts: list[str] = []
+    healthy = {"value": False}
+
+    def flaky(message, examples, config, client=None):
+        attempts.append(message.uid)
+        if message.uid == "103" and not healthy["value"]:
+            raise RuntimeError("provider down")
+        return make_verdict(0.9)
+
+    agent = make_agent(tmp_path, StubNotifier(), flaky)
+    agent.cycle()
+    assert "103" in attempts
+
+    healthy["value"] = True
+    attempts.clear()
+    result = agent.cycle()
+
+    assert attempts[0] == "103", "the failed message must be retried, not skipped"
+    assert result.fetched == 10  # 103 onwards
 
 
 def test_notifier_failure_is_recorded_not_raised(tmp_path):

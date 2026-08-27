@@ -12,6 +12,8 @@ from .feedback import Example, FeedbackStore
 from .notify.console import ConsoleNotifier
 from .state import DecisionLog
 
+from .providers import NAMES as PROVIDERS
+
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "inbox.json"
 
 
@@ -39,43 +41,44 @@ def _notifier(config: Config, force_console: bool):
     return TelegramNotifier(config.telegram_token, config.telegram_chat_id)
 
 
-def _classifier(force_offline: bool):
-    """The real classifier, or the heuristic stand-in when no key is available."""
-    from .offline import classify as offline_classify
-    from .offline import has_credentials
+def _resolve_provider(args, config: Config):
+    """Pick the classifier, honouring --provider then HERMES_PROVIDER then auto."""
+    from . import providers
 
-    if force_offline or not has_credentials():
-        return offline_classify, True
-    return None, False  # None → Agent uses the real classifier
+    requested = getattr(args, "provider", None) or config.provider
+    classify_fn, name = providers.resolve(requested)
+    if name == "offline" and requested in ("auto", None):
+        print(
+            "! no Anthropic credential found — falling back to offline keyword rules.\n"
+            "  These do NOT learn from your corrections. Set ANTHROPIC_API_KEY,\n"
+            "  or use --provider ollama to run a local model for free.\n",
+            file=sys.stderr,
+        )
+    return classify_fn, name
 
 
-def _build(args) -> tuple[Agent, bool]:
+def _build(args) -> tuple[Agent, str]:
     config = Config.from_env()
     if getattr(args, "threshold", None) is not None:
         config.gate.threshold = args.threshold
-    classify_fn, offline = _classifier(getattr(args, "offline", False))
+    classify_fn, name = _resolve_provider(args, config)
     agent = Agent(
         source=_source(config, getattr(args, "fixtures", False)),
         notifier=_notifier(config, getattr(args, "console", False)),
         config=config,
         classify_fn=classify_fn,
     )
-    return agent, offline
-
-
-def _warn_offline(offline: bool) -> None:
-    if offline:
-        print(
-            "! no ANTHROPIC_API_KEY — using the offline keyword classifier.\n"
-            "  It does not learn from your corrections. Set a key for the real one.\n",
-            file=sys.stderr,
-        )
+    return agent, name
 
 
 def cmd_once(args) -> int:
-    agent, offline = _build(args)
-    _warn_offline(offline)
-    print(f"source: {agent.source.name} · notifier: {agent.notifier.name}")
+    from . import providers
+
+    agent, name = _build(args)
+    print(
+        f"source: {agent.source.name} · notifier: {agent.notifier.name}"
+        f" · {providers.describe(name, agent.config)}"
+    )
     result = agent.cycle()
     print(
         f"{result.fetched} fetched · {result.notified} notified"
@@ -87,11 +90,13 @@ def cmd_once(args) -> int:
 
 
 def cmd_run(args) -> int:
-    agent, offline = _build(args)
-    _warn_offline(offline)
+    from . import providers
+
+    agent, name = _build(args)
     print(
         f"watching {agent.source.name} every {agent.config.interval}s "
-        f"→ {agent.notifier.name} (ctrl-c to stop)"
+        f"→ {agent.notifier.name} · {providers.describe(name, agent.config)}"
+        f" (ctrl-c to stop)"
     )
     try:
         agent.run()
@@ -104,18 +109,18 @@ def cmd_demo(args) -> int:
     """End-to-end run against fixtures, no credentials needed."""
     config = Config.from_env()
     config.data_dir = Path(args.data_dir)
-    classify_fn, offline = _classifier(args.offline)
+    from . import providers
+
+    classify_fn, name = _resolve_provider(args, config)
     agent = Agent(
         source=_source(config, True),
         notifier=_notifier(config, True),
         config=config,
         classify_fn=classify_fn,
     )
-    _warn_offline(offline)
-    engine = "offline heuristics" if offline else config.model
     print(
         f"demo · {len(agent.source.fetch_new())} fixture messages"
-        f" · threshold {config.gate.threshold} · {engine}"
+        f" · threshold {config.gate.threshold} · {providers.describe(name, config)}"
     )
     result = agent.cycle()
     print(f"\n{result.notified} of {result.fetched} would have interrupted you.")
@@ -150,9 +155,11 @@ def cmd_eval(args) -> int:
     config = Config.from_env()
     if args.threshold is not None:
         config.gate.threshold = args.threshold
-    classify_fn, offline = _classifier(args.offline)
-    _warn_offline(offline)
+    from . import providers
+
+    classify_fn, name = _resolve_provider(args, config)
     store = FeedbackStore(config.ensure_data_dir() / "feedback.jsonl")
+    print(f"scoring against {providers.describe(name, config)}\n")
     print(run_eval(store, config, classify_fn=classify_fn).render())
     return 0
 
@@ -196,21 +203,21 @@ def main(argv: list[str] | None = None) -> int:
 
     demo = sub.add_parser("demo", help="run against bundled fixtures (no credentials)")
     demo.add_argument("--data-dir", default="data/demo")
-    demo.add_argument("--offline", action="store_true", help="force the heuristic classifier")
+    demo.add_argument("--provider", choices=PROVIDERS, help="classifier to use")
     demo.set_defaults(func=cmd_demo)
 
     once = sub.add_parser("once", help="one polling cycle, then exit")
     once.add_argument("--fixtures", action="store_true", help="force the fixture mailbox")
     once.add_argument("--console", action="store_true", help="force console output")
     once.add_argument("--threshold", type=float, help="override the notify threshold")
-    once.add_argument("--offline", action="store_true")
+    once.add_argument("--provider", choices=PROVIDERS)
     once.set_defaults(func=cmd_once)
 
     run = sub.add_parser("run", help="poll continuously")
     run.add_argument("--fixtures", action="store_true")
     run.add_argument("--console", action="store_true")
     run.add_argument("--threshold", type=float)
-    run.add_argument("--offline", action="store_true")
+    run.add_argument("--provider", choices=PROVIDERS)
     run.set_defaults(func=cmd_run)
 
     feedback = sub.add_parser("feedback", help="correct a call the agent made")
@@ -221,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ev = sub.add_parser("eval", help="replay your corrections and score the classifier")
     ev.add_argument("--threshold", type=float)
-    ev.add_argument("--offline", action="store_true")
+    ev.add_argument("--provider", choices=PROVIDERS, help="compare providers on the same corrections")
     ev.set_defaults(func=cmd_eval)
 
     stats = sub.add_parser("stats", help="summarize what it has done so far")

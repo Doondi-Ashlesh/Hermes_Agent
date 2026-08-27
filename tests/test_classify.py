@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from hermes_inbox.classify import SCHEMA, build_prompt, classify
+from hermes_inbox.classify import SCHEMA, build_system, build_user, classify
 from hermes_inbox.config import Config
 from hermes_inbox.evals import Report, run_eval
 from hermes_inbox.feedback import Example, FeedbackStore
@@ -91,7 +91,13 @@ def test_system_prompt_is_cached():
     client = StubClient()
     classify(make_message(), [], Config(), client=client)
     system = client.calls[0]["system"]
-    assert system[0]["cache_control"] == {"type": "ephemeral"}
+    assert system[-1]["cache_control"]["type"] == "ephemeral"
+
+
+def test_cache_ttl_is_configurable():
+    client = StubClient()
+    classify(make_message(), [], Config(cache_ttl="5m"), client=client)
+    assert client.calls[0]["system"][-1]["cache_control"]["ttl"] == "5m"
 
 
 def test_body_is_redacted_before_it_reaches_the_model():
@@ -116,9 +122,9 @@ def test_corrections_are_included_in_the_prompt():
     ]
     classify(make_message(), examples, Config(), client=client)
 
-    sent = client.calls[0]["messages"][0]["content"]
-    assert "marketing is never urgent" in sent
-    assert "NOT IMPORTANT" in sent
+    system = "".join(b["text"] for b in client.calls[0]["system"])
+    assert "marketing is never urgent" in system
+    assert "NOT IMPORTANT" in system
 
 
 def test_refusal_is_surfaced_not_swallowed():
@@ -128,10 +134,28 @@ def test_refusal_is_surfaced_not_swallowed():
     assert "manual" in verdict.suggested_action
 
 
-def test_prompt_omits_example_section_when_there_are_none():
-    prompt = build_prompt(make_message(), [])
-    assert "previously corrected" not in prompt
-    assert "Classify this message:" in prompt
+def test_user_turn_carries_only_the_message():
+    turn = build_user(make_message())
+    assert "previously corrected" not in turn
+    assert "Classify this message:" in turn
+
+
+def test_corrections_live_in_the_cached_prefix_not_the_user_turn():
+    """Caching is a prefix match — corrections after the breakpoint are re-billed."""
+    examples = [Example("9", "a@b.example", "s", "snip", False, "never ping me")]
+    blocks = build_system(examples)
+
+    assert len(blocks) == 2
+    assert "never ping me" in blocks[1]["text"]
+    assert blocks[-1]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
+    assert "cache_control" not in blocks[0]
+    assert "never ping me" not in build_user(make_message())
+
+
+def test_system_is_a_single_cached_block_when_there_are_no_corrections():
+    blocks = build_system([])
+    assert len(blocks) == 1
+    assert blocks[0]["cache_control"]["type"] == "ephemeral"
 
 
 def test_schema_is_closed():
