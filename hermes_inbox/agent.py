@@ -84,6 +84,9 @@ class Agent:
         applied, errors = self._apply_labels()
         result.labels_applied = applied
         result.errors.extend(errors)
+        # Persist the notifier offset immediately: getUpdates deletes consumed
+        # updates server-side, so a crash before saving loses those corrections.
+        self.state.save()
 
         since = self.state.last_uid(self.source.name)
         messages = self.source.fetch_new(since_uid=since)
@@ -117,9 +120,12 @@ class Agent:
                 except Exception as exc:
                     result.errors.append(f"notify failed for {message.uid}: {exc}")
 
+            # Persist per message, not per cycle. Held only in memory, a crash
+            # or SIGTERM mid-cycle would replay every message since the last
+            # save and re-send notifications for all of them.
             self.state.set_last_uid(self.source.name, message.uid)
+            self.state.save()
 
-        self.state.save()
         return result
 
     def run(self, interval: int | None = None, max_cycles: int | None = None) -> None:

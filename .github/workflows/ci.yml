@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # The suite runs without network or credentials by design; unsetting the
+      # key here proves that stays true rather than trusting it.
+      - name: Tests
+        env:
+          ANTHROPIC_API_KEY: ""
+          ANTHROPIC_AUTH_TOKEN: ""
+        run: pytest tests/ -q
+
+  docs:
+    name: docs consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      # Links, anchors, env vars, CLI coverage, module inventory, test counts.
+      - name: Doc consistency
+        run: |
+          python scripts/check_links.py
+          pytest tests/test_docs.py -q
+
+  diagrams:
+    name: mermaid parses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # F-001: a broken diagram renders as raw text on GitHub with no error.
+      # Parse every block with mermaid's own parser rather than eyeballing it.
+      - name: Install mermaid
+        run: npm install --no-audit --no-fund mermaid@11 jsdom
+
+      - name: Parse every diagram
+        run: node scripts/check_diagrams.mjs
+
+  smoke:
+    name: end-to-end demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e .
+
+      # The offline provider needs no credentials, so the whole pipeline —
+      # ingest, redact, classify, gate, notify, record — runs in CI.
+      - name: Demo
+        run: |
+          hermes-inbox demo --provider offline
+          hermes-inbox stats
+
+      - name: Adversarial fixture must not be flagged
+        run: |
+          python - <<'EOF'
+          import json, sys
+          rows = [json.loads(l) for l in open("data/demo/decisions.jsonl")]
+          injection = next(r for r in rows if r["message"]["uid"] == "109")
+          assert not injection["gate"]["notify"], "prompt injection fixture was flagged"
+          assert injection["verdict"]["category"] == "spam", injection["verdict"]
+          print("uid 109 correctly classified as spam and suppressed")
+          EOF

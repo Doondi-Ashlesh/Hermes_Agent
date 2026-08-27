@@ -9,9 +9,15 @@ cost something (see [`docs/DECISIONS.md`](docs/DECISIONS.md)).
 Nothing is "done" until it has been run.
 
 ```bash
-python -m pytest tests/ -q          # must be green before any commit
-hermes-inbox demo --provider offline # end-to-end, no credentials
+make test      # must be green before any commit
+make check     # docs consistency
+make demo      # end-to-end, no credentials
+make diagrams  # mermaid parses (needs node; CI runs it regardless)
 ```
+
+CI runs all four on every push and pull request
+(`.github/workflows/ci.yml`), across Python 3.10-3.13. Green locally is not
+the same as green on a clean machine — that is what the matrix is for.
 
 - Run the suite before *and* after a change, not only after.
 - A slow test is a bug report. `F-003` was found because one test took 60s.
@@ -83,7 +89,7 @@ body — that is where someone reading `git log` will look for them.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            117 tests, no network required
+tests/            132 tests, no network required
 fixtures/         offline mailbox, including one adversarial message
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```
