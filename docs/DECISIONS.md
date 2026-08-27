@@ -13,6 +13,16 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-008 · Docs claimed test counts that were three different wrong numbers
+**Why:** `87`, `100` and `116` were hand-written at different times and drifted.
+**✅ Fixed** — a test reads the real collected count and fails on any doc quoting a
+different one. Small lies make a reader distrust the whole page.
+
+### F-007 · Doc cross-references broke while writing this log
+**Why:** added anchor links faster than they could be verified by hand.
+**✅ Fixed** — `scripts/check_links.py` plus `tests/test_docs.py` now fail the build on a
+broken link, stale env var, or undocumented command.
+
 ### F-006 · ADR 0001 claimed DGX-class hardware was required
 **Why:** read the README's *express install* line as the general requirement; the
 primary source was unreachable and the gap was never revisited.
@@ -51,14 +61,17 @@ argument for enforcement below the agent.
 **✅ Fixed** — all blocks parsed with mermaid's own parser before push; two edge labels
 needed quoting. Now a standing rule in `CLAUDE.md`.
 
-### F-000 · Doc cross-references broke while writing this log
-**Why:** added anchor links faster than they could be verified by hand.
-**✅ Fixed** — `scripts/check_links.py` plus `tests/test_docs.py` now fail the build on a
-broken link, stale env var, or undocumented command.
-
 ---
 
 ## Decisions
+
+### D-011 · Docs written for replication, and tested
+**Why:** the docs explained *what* and *why* but a new engineer couldn't rebuild or
+extend without reverse-engineering. Added `SETUP.md` (verify step per stage),
+`EXTENDING.md` (one email traced through the code + four recipes) and a `Makefile`.
+**Tested, not trusted:** `make check` now fails on a `make` target that doesn't exist,
+a symbol a recipe tells you to import that doesn't, a module missing from the file
+inventory, or a stale test count. Verified by wiping `.venv` and replaying the doc.
 
 ### D-010 · Provider registry with three implementations
 `auto | anthropic | ollama | offline`. Three because a seam with one implementation is

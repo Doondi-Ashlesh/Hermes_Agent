@@ -23,23 +23,16 @@ IMAP (read-only)  →  redact  →  classify (Claude)  →  policy gate  →  Te
 
 ## Run it now
 
-No credentials needed:
-
 ```bash
-pip install -e .
-hermes-inbox demo
+make install && make demo
 ```
 
-That runs 12 fixture messages through the whole pipeline with a keyword
-classifier and prints what would have interrupted you. Four of the twelve do.
+12 fixture messages go through the whole pipeline with a keyword classifier;
+four of them would have interrupted you. No credentials needed.
 
-For the real thing:
-
-```bash
-cp .env.example .env      # fill in ANTHROPIC_API_KEY + IMAP + Telegram
-hermes-inbox once         # one cycle, see what it says
-hermes-inbox run          # poll every 60s
-```
+For a real mailbox — model access, IMAP, Telegram, and the gate rules, each with
+a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, see
+**[EXTENDING.md](EXTENDING.md)**.
 
 ## Commands
 

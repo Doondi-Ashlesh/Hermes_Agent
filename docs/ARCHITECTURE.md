@@ -14,7 +14,8 @@ exists. It runs outside the NemoClaw sandbox by design (read-only credentials, n
 send path); see that document for when the sandbox starts earning its cost, and
 [DECISIONS.md](DECISIONS.md) for why each choice was made.
 
-Section 8 maps the shipped module layout onto these diagrams.
+Section 7 maps the shipped module layout onto these diagrams. To run it, see
+[SETUP.md](SETUP.md); to change it, [EXTENDING.md](EXTENDING.md).
 
 ## 1. System context
 
