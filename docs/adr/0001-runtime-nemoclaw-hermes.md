@@ -1,8 +1,10 @@
 # ADR 0001: Build the support agent on Hermes Agent under the NVIDIA NemoClaw blueprint
 
-- **Status:** Accepted
+- **Status:** Accepted — amended 2026-08-27
 - **Date:** 2026-08-24
 - **Deciders:** Project owner
+- **Amendments:** [2026-08-27](#amendment-2026-08-27) — Q1 and Q2 answered; the
+  deployment-floor cost was overstated and has been corrected
 
 ## Context
 
@@ -70,9 +72,11 @@ diverge.
 
 ### Accepted costs
 
-- **Higher deployment floor.** NemoClaw's documented targets are DGX-class systems or WSL.
-  Bare Hermes runs on a $5 VPS. Cheap-VPS deployment is off the table, and any hosting
-  decision must satisfy NemoClaw's prerequisites.
+- **Higher deployment floor.** ~~NemoClaw's documented targets are DGX-class systems or
+  WSL. Bare Hermes runs on a $5 VPS. Cheap-VPS deployment is off the table.~~
+  **Corrected 2026-08-27 — this was wrong; see the amendment below.** The real floor is
+  4 vCPU / 8 GB RAM / 20 GB disk. Modest, but still above the cheapest VPS tier, and any
+  hosting decision must satisfy NemoClaw's prerequisites.
 - **Two unfamiliar systems at once.** When the agent misbehaves early on, the cause may lie
   in Hermes, in the sandbox policy, or in the interaction between them. Phase 0 exists
   specifically to build the operator familiarity that makes this diagnosable.
@@ -108,16 +112,61 @@ These were not resolved at decision time; NVIDIA's documentation domains
 (`docs.nvidia.com`, `developer.nvidia.com`, `build.nvidia.com`) were not reachable when this
 was written. Each must be confirmed against primary sources before Phase 0 exits.
 
-1. **Prerequisites.** Exact hardware, OS, and driver requirements. Specifically: is a local
-   GPU required, or can the stack run against hosted inference on commodity hardware?
-2. **Inference providers.** Which providers NemoClaw's routed inference supports, and
-   whether the project's intended model is among them.
+1. ~~**Prerequisites.**~~ **Answered 2026-08-27 — see amendment.**
+2. ~~**Inference providers.**~~ **Answered 2026-08-27 — see amendment.**
 3. **Egress policy granularity.** Whether policy is expressible per-destination with
    operator approval at the granularity the escalation design needs.
 4. **Gateway networking.** How the Hermes messaging gateway's inbound connections interact
    with sandbox network policy.
 5. **The `nemoclaw-light` Hermes skin.** The README mentions a managed skin installed when
    connecting from light terminals; its relevance to a gateway-driven deployment is unclear.
+
+## Amendment 2026-08-27
+
+Two of the five open questions are closed. `docs.nvidia.com` is still unreachable from the
+development environment, but **the documentation source is committed to the NemoClaw
+repository** as `docs/**/*.mdx` and is readable over `raw.githubusercontent.com`. That is
+the access route for the three questions that remain.
+
+### Q1 — Prerequisites: answered
+
+From `docs/get-started/prerequisites.mdx`:
+
+| | |
+|---|---|
+| Minimum | 4 vCPU · 8 GB RAM · 20 GB disk |
+| Recommended | 4+ vCPU · 16 GB RAM · 40 GB disk |
+| Software | Docker (Engine / Desktop / Colima), Node.js 22.19+, npm 10+, Python 3 |
+| Platforms | Linux (Ubuntu 24.04 primary), macOS on Apple Silicon, Windows via WSL2, DGX |
+| GPU | **Not mentioned as a requirement** |
+
+**A local GPU is not required.** The original ADR read the README's *express install*
+framing — "on a supported DGX or WSL host" — as the general hardware requirement. It is not;
+express install is one path among several.
+
+**Consequence:** open decision 3 in `PLAN.md` (hosting) is unblocked. The target is a
+commodity 8 GB VM, not DGX-class hardware. The "higher deployment floor" cost above was the
+single largest accepted cost of this decision, and it was overstated. The decision itself
+does not change — the argument for it was always the enforcement boundary, not the hardware
+— but the cost/benefit that justified adopting NemoClaw up front rather than deferring it
+is now materially better than recorded.
+
+### Q2 — Inference providers: answered
+
+`docs/inference/` ships dedicated setup pages for **Anthropic, OpenAI, Google Gemini,
+OpenRouter, and NVIDIA endpoints**, alongside local serving via Ollama, llama.cpp, vLLM, and
+NIM, plus a Hermes provider and a model router.
+
+**Consequence:** hosted inference on commodity hardware is a first-class supported path, and
+open decision 2 in `PLAN.md` (model) is constrained only by preference. Local serving via
+Ollama is also the free path used by the inbox agent today
+(`docs/INBOX_AGENT.md`, D-010).
+
+### Still open
+
+Q3 (egress policy granularity), Q4 (gateway networking), and Q5 (`nemoclaw-light`) remain
+unanswered. All three are answerable from the same source. They do not block the inbox
+agent, which runs outside the sandbox by design (D-005); they do block Phase 0 exit.
 
 ## Notes
 
