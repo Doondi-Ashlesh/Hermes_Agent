@@ -244,10 +244,14 @@ both validate against the same enum.
 ## Dev workflow
 
 ```bash
-make test     # full suite, no network, <1s
-make check    # docs consistency: links, anchors, env vars, CLI coverage
-make demo     # end-to-end against fixtures
+make test      # full suite, no network, <2s
+make check     # docs consistency: links, anchors, env vars, CLI coverage
+make demo      # end-to-end against fixtures
+make diagrams  # parse every mermaid block (needs node)
 ```
+
+All four run in CI on every push and PR, plus a Python 3.10-3.13 matrix and a
+check that the adversarial fixture is still suppressed.
 
 `make check` exists because docs drift silently. It fails the build if you add a
 config key without documenting it, add a CLI command without a docs entry, break
@@ -299,6 +303,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            117 tests, no network required
+tests/            132 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message
 ```

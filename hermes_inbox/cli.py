@@ -167,7 +167,7 @@ def cmd_eval(args) -> int:
 def cmd_stats(args) -> int:
     config = Config.from_env()
     data = config.ensure_data_dir()
-    decisions = DecisionLog(data / "decisions.jsonl").all()
+    decisions = list(DecisionLog(data / "decisions.jsonl").iter_all())
     important, not_important = FeedbackStore(data / "feedback.jsonl").counts()
 
     if not decisions:

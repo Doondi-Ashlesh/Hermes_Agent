@@ -5,6 +5,9 @@ venv/
 *.egg-info/
 build/
 dist/
+node_modules/
+package-lock.json
+package.json
 .pytest_cache/
 
 # runtime state: decisions, corrections, last-seen UIDs

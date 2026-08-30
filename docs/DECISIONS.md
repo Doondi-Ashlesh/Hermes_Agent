@@ -13,6 +13,32 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-012 · The test suite ran only when someone remembered
+**Why:** no CI ever existed. Tests only ran when someone remembered.
+**✅ Fixed** — GitHub Actions on every push and PR: suite across Python 3.10-3.13 with
+the API key explicitly blanked, doc consistency, mermaid parsing, and an end-to-end demo
+that asserts the injection fixture is still suppressed.
+
+### F-011 · A crash mid-write could truncate `state.json`
+**Why:** `save()` wrote in place. A partial file reads back as "no cursor", which
+re-notifies the entire mailbox.
+**✅ Fixed** — write to a temp file, fsync, then `os.replace`. Test simulates a failure
+mid-save and asserts the previous cursor survives with no debris left.
+
+### F-010 · `DecisionLog.find()` parsed the whole file, once per correction
+**Why:** `find()` called `all()`. Measured at a year of mail (36.5k decisions, 33.6 MB):
+**~1.0s per lookup**, and one lookup happens per button press.
+**✅ Fixed** — in-memory uid→offset index, built by scanning offsets without parsing JSON,
+updated on append, rebuilt on a miss or stale hit. **1010ms → 10ms (101x).** Regression
+test fails if lookups start scaling with log size again.
+
+### F-009 · A crash mid-cycle re-sent every notification since the last save
+**Why:** `set_last_uid` updated memory per message but `save()` only ran after the whole
+loop. SIGTERM or a crash lost the advance and replayed it.
+**✅ Fixed** — save per message, and save the notifier offset before processing (consumed
+`getUpdates` cannot be re-fetched). Test kills a cycle mid-way and asserts the resumed run
+starts at the right message.
+
 ### F-008 · Docs claimed test counts that were three different wrong numbers
 **Why:** `87`, `100` and `116` were hand-written at different times and drifted.
 **✅ Fixed** — a test reads the real collected count and fails on any doc quoting a
@@ -64,6 +90,16 @@ needed quoting. Now a standing rule in `CLAUDE.md`.
 ---
 
 ## Decisions
+
+### D-012 · The product is the machinery, not either deployment
+**Why:** the repo said "customer support agent" and shipped an inbox agent. Measured the
+split — ~766 loc source-agnostic vs ~382 mail-flavoured, of which only `imap.py` (97 loc)
+is truly source-bound. The two differ in the *verb* (judge vs draft) and the *action*
+(notify vs send), not in the pipeline.
+**Rejected:** keeping support as the headline (README would describe something that
+doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still applies to both).
+**✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
+Track A running, Track B blocked on tickets and a write scope.
 
 ### D-011 · Docs written for replication, and tested
 **Why:** the docs explained *what* and *why* but a new engineer couldn't rebuild or

@@ -22,6 +22,11 @@ check: install  ## Verify docs: links, anchors, env vars, CLI coverage
 	$(PY) scripts/check_links.py
 	$(PY) -m pytest tests/test_docs.py -q
 
+diagrams:  ## Parse every mermaid block with the real parser (needs node)
+	@command -v npm >/dev/null || { echo "npm not found — CI covers this"; exit 0; }
+	@npm install --silent --no-audit --no-fund --no-save mermaid@11 jsdom
+	@node scripts/check_diagrams.mjs
+
 demo: install  ## End-to-end against bundled fixtures, no credentials needed
 	$(PY) -m hermes_inbox.cli demo --provider offline
 

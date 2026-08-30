@@ -1,53 +1,99 @@
-# Support Agent (Hermes Agent)
+# Hermes Agent
 
-A self-improving customer support agent built on **Hermes Agent**. It handles recurring support workflows and gets better at your product's specific issues over time.
+A self-improving triage agent. It watches a stream of incoming messages, decides
+which ones need a human, acts, and gets better at *your* judgement calls as you
+correct it.
 
-> **Runnable today: the [inbox agent](docs/INBOX_AGENT.md).** The support use case
-> below needs production ticket data. The inbox agent needs a mailbox you already
-> own — it watches your mail, pings you on Telegram only when something matters,
-> and learns from the corrections you give it.
->
-> ```bash
-> make install && make demo    # no credentials needed
-> ```
->
-> Full walkthrough: [SETUP.md](docs/SETUP.md).
+The source it reads and the action it takes are both pluggable. What sits between
+them — normalization, redaction, judgement, a deterministic policy gate, a
+correction loop, and an evaluation harness — is the actual product.
 
-## What it does
-- Triages incoming support tickets and drafts/sends responses for common issues
-- Builds a persistent profile per customer (history, preferences, past complaints)
-- Converts repeated troubleshooting steps into reusable skills over time
-- Escalates unresolved or high-risk tickets to a human agent
+```
+   source          judge            gate              action         learn
+   ──────          ─────            ────              ──────         ─────
+   mailbox   →   importance   →   deterministic   →   notify    →   corrections
+   tickets       or a draft       rules, not a        or send       replayed and
+   anything                       model's opinion                   scored
+       ↑                                                                │
+       └────────────────────────────────────────────────────────────────┘
+```
 
-## Use cases
-- Tier-1 ticket triage (password resets, billing questions, known-bug workarounds)
-- Personalized account support using customer history
-- Recurring diagnostic workflows (e.g., daily error report checks, monitoring alerts)
+Roughly two-thirds of the code doesn't know or care what it's reading.
 
-## Requirements
-- Hermes Agent runtime (self-hosted, Python, MIT licensed)
-- Access to your support inbox/ticketing system (email, Zendesk, etc.)
-- Model access via Nous Portal or your own configured LLM provider
+## Deployments
 
-## Setup
-1. Install and run the Hermes Agent runtime.
-2. Connect your ticketing/support channel as an input source.
-3. Seed the agent with your existing FAQs, macros, or past resolved tickets so it has a starting skill set.
-4. Configure escalation rules for tickets it shouldn't resolve autonomously (refunds above a threshold, legal/security issues, angry customers, etc.).
-5. Run it in shadow mode first (drafts only, human approves) before enabling autosend.
+### 1. Inbox agent — running today
 
-## How it improves over time
-After each resolved ticket, the agent evaluates the interaction, extracts a reusable pattern, and stores it as a skill. Over weeks of use, response quality and resolution speed should compound rather than reset each session.
+Watches a mailbox and pings you on Telegram only when something actually needs
+you. Press a button when it gets a call wrong, and that correction goes into
+every later judgement.
+
+```bash
+make install && make demo    # 12 fixture emails, no credentials needed
+```
+
+Real mailbox in about 20 minutes: **[SETUP.md](docs/SETUP.md)**.
+
+Read-only by construction — the mailbox is opened `readonly=True` and fetched
+with `BODY.PEEK[]`, and there is no send path in the codebase. It cannot alter
+your mail.
+
+### 2. Support agent — planned
+
+The same machinery pointed at a ticket source, drafting replies instead of
+judging importance, with the gate deciding send / hold / escalate instead of
+notify / stay silent.
+
+It is not built, and the honest reason is that it needs two things that do not
+exist yet: a corpus of real tickets, and a write scope. The write scope is what
+finally makes the NemoClaw sandbox load-bearing
+([ADR 0001](docs/adr/0001-runtime-nemoclaw-hermes.md)).
+
+| | Inbox agent | Support agent |
+|---|---|---|
+| Source | IMAP mailbox | Ticket system |
+| Judgement | How important is this? | What is the reply? |
+| Gate decides | Notify / stay silent | Send / hold / escalate |
+| Human role | Corrects the call | Approves the draft |
+| Needs a write scope | No | **Yes** |
+| Status | **Running** | Planned |
+
+## How it improves
+
+There is no fine-tuning. Corrections are appended as labeled examples and
+rendered into the prompt above whatever is being judged, marked as outranking
+the standing guidance. It stops making a mistake because you told it not to, and
+the telling persists.
+
+The half that makes this honest is the eval harness. Corrections can conflict,
+overfit, or drown each other out, so every stored correction is replayed with
+**itself excluded from the prompt** and scored. Without that, "it's getting
+better" is unfalsifiable.
+
+```bash
+make eval
+```
+
+Watch recall. A false positive is one unwanted interruption; a false negative is
+something important you never saw.
 
 ## Project docs
-- [Setup](docs/SETUP.md) — clean machine to running agent, with a verify step at each stage
-- [Inbox agent](docs/INBOX_AGENT.md) — what it does, commands, how the correction loop works
-- [Extending](docs/EXTENDING.md) — trace of one email through the code, plus recipes for new sources, notifiers, providers and gate rules
-- [Decisions](docs/DECISIONS.md) — why it is built this way, what broke, what was done
-- [Architecture](docs/ARCHITECTURE.md) — diagrams: system context, components, trust boundaries, lifecycles
-- [Implementation plan](docs/PLAN.md) — architecture, phased build, risks, open decisions
-- [ADR 0001](docs/adr/0001-runtime-nemoclaw-hermes.md) — why Hermes Agent runs under the NVIDIA NemoClaw blueprint
 
-## Notes
-- Not intended to fully replace human support — best for high-volume, low-complexity, repeatable tickets.
-- Review the skill library periodically to catch bad patterns before they compound.
+| | |
+|---|---|
+| [Setup](docs/SETUP.md) | Clean machine to running agent, with a verify step at each stage |
+| [Inbox agent](docs/INBOX_AGENT.md) | What deployment 1 does, its commands and limits |
+| [Extending](docs/EXTENDING.md) | One message traced through the code, plus recipes for new sources, notifiers, providers and gate rules |
+| [Architecture](docs/ARCHITECTURE.md) | Diagrams: system context, components, trust boundaries, lifecycles |
+| [Plan](docs/PLAN.md) | The phase model both deployments earn their autonomy through |
+| [Decisions](docs/DECISIONS.md) | Why it is built this way, what broke, what was done about it |
+| [ADR 0001](docs/adr/0001-runtime-nemoclaw-hermes.md) | Why Hermes runs under the NVIDIA NemoClaw blueprint |
+| [CLAUDE.md](CLAUDE.md) | Working agreement: test, sync docs, log, push |
+
+## Status
+
+Deployment 1 runs. 132 tests, no network or credentials required.
+
+Not yet done, and deliberately so: reply drafting, the NemoClaw sandbox, and
+validation against a real mailbox over a meaningful period. The open items are
+tracked at the end of [DECISIONS.md](docs/DECISIONS.md).
