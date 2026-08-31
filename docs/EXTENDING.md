@@ -260,11 +260,11 @@ code does.
 
 ### Before you push
 
-The checklist in [`CLAUDE.md`](../CLAUDE.md) is the short version:
+The checklist in [`CONTRIBUTING.md`](../CONTRIBUTING.md) is the short version:
 
 1. `make test` green
 2. `make check` green
-3. Docs updated for what you touched — the table in `CLAUDE.md` §2 says which
+3. Docs updated for what you touched — the table in `CONTRIBUTING.md` §2 says which
 4. An entry in [DECISIONS.md](DECISIONS.md) if you decided something or something broke
 
 ### Testing conventions
@@ -294,6 +294,8 @@ hermes_inbox/
   ollama.py       local provider
   offline.py      keyword rules; no model, used by demo and CI
   providers.py    registry: name → classify_fn
+  http.py         JSON-over-HTTP with retries for the non-SDK providers
+  logs.py         logging setup: text or json, level from env
   gate.py         ordered deterministic rules
   feedback.py     labeled examples, the correction loop
   evals.py        leave-one-out replay scoring
@@ -303,6 +305,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            132 tests, no network required
+tests/            160 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message
 ```

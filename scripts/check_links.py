@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify every relative markdown link and heading anchor across the docs resolves.
 
-Cross-references breaking silently is the failure mode this guards (CLAUDE.md §2).
+Cross-references breaking silently is the failure mode this guards (CONTRIBUTING.md §2).
 Anchor rules follow GitHub's: lowercase, drop punctuation, one hyphen per space
 character — runs of whitespace are NOT collapsed.
 """

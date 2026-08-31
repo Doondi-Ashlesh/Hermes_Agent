@@ -14,12 +14,11 @@ Uses urllib so the package needs no HTTP dependency.
 
 from __future__ import annotations
 
-import json
-import urllib.error
-import urllib.parse
-import urllib.request
-
+from ..http import HttpError, post_json
+from ..logs import get_logger
 from ..schema import Decision
+
+log = get_logger(__name__)
 
 API = "https://api.telegram.org/bot{token}/{method}"
 
@@ -31,25 +30,26 @@ class TelegramError(RuntimeError):
 class TelegramNotifier:
     name = "telegram"
 
-    def __init__(self, token: str, chat_id: str, timeout: int = 20):
+    def __init__(self, token: str, chat_id: str, timeout: int = 20, retries: int = 3, backoff: float = 0.5):
         self.token = token
         self.chat_id = chat_id
         self.timeout = timeout
+        self.retries = retries
+        self.backoff = backoff
 
     def _call(self, method: str, payload: dict) -> dict:
-        url = API.format(token=self.token, method=method)
-        data = json.dumps(payload).encode("utf-8")
-        request = urllib.request.Request(
-            url, data=data, headers={"Content-Type": "application/json"}
-        )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise TelegramError(f"{method} failed ({exc.code}): {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise TelegramError(f"{method} failed: {exc.reason}") from exc
+            body = post_json(
+                API.format(token=self.token, method=method),
+                payload,
+                timeout=self.timeout,
+                retries=self.retries,
+                backoff=self.backoff,
+            )
+        except HttpError as exc:
+            raise TelegramError(f"{method} failed: {exc}") from exc
+        # Telegram reports application errors in a 200 body, so this is not
+        # something the HTTP layer can retry for us.
         if not body.get("ok"):
             raise TelegramError(f"{method} failed: {body.get('description')}")
         return body.get("result", {})

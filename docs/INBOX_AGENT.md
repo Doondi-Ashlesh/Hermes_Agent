@@ -45,6 +45,10 @@ a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, se
 | `hermes-inbox eval` | Replay every correction and score the classifier |
 | `hermes-inbox stats` | What it has processed, by category and by gate rule |
 
+All of `demo`, `once` and `run` accept `--log-level DEBUG` and `--log-format json`.
+`DEBUG` prints every decision with its score and the gate rule that fired; `json`
+emits one object per line for `journalctl -o cat | jq`.
+
 ## How the learning actually works
 
 Be precise about this, because "self-improving agent" is usually doing a lot of
@@ -247,6 +251,10 @@ Phase 0 (NemoClaw) is deliberately **not** a prerequisite here; see above.
   failure the cycle stops without advancing, so an outage cannot silently
   swallow mail. The trade is that a genuinely poisonous message would stall the
   queue — loudly, in the error output, every cycle.
+- **Retries are bounded.** Connection errors, 408, 429 and 5xx get
+  `HERMES_HTTP_RETRIES` extra attempts with exponential backoff; other 4xx fail
+  at once. A provider down longer than that stops the cycle without losing mail
+  ([F-004](DECISIONS.md#f-004--a-provider-outage-would-have-discarded-the-mailbox)).
 - **Corrections grow unboundedly.** `HERMES_MAX_EXAMPLES` (default 40) caps what
   reaches the prompt, newest first. There is no pruning or clustering yet.
 - **No per-sender memory.** Every message is judged independently; the customer

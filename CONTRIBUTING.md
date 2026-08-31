@@ -1,4 +1,4 @@
-# Working agreement
+# Contributing
 
 Standing instructions for this repository. These are process rules, not
 suggestions — they exist because each one has already been violated once and
@@ -59,16 +59,37 @@ fixed.** Three or four lines. No narrative — detail belongs in the code, the
 tests, or the doc the entry points at. Record failures plainly; a log that only
 holds successes is worthless.
 
-## 4. Push when the change is complete
+## 4. Branch naming
+
+`<layer>/<what-is-new>` — the architecture layer being changed, then the aspect
+being added, in kebab-case. The layers are the ones in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §7:
+
+| Layer | Covers | Example branch |
+|---|---|---|
+| `ingestion` | `sources/`, `schema.py`, `redact.py` | `ingestion/zammad-source` |
+| `judgement` | `classify.py`, `providers.py`, `ollama.py`, `offline.py` | `judgement/per-sender-memory` |
+| `policy` | `gate.py` | `policy/sentiment-trigger` |
+| `delivery` | `notify/` | `delivery/whatsapp-notifier` |
+| `learning` | `feedback.py`, `evals.py` | `learning/correction-pruning` |
+| `runtime` | `agent.py`, `state.py`, `cli.py`, `config.py` | `runtime/concurrent-classify` |
+| `observability` | `logs.py`, `http.py` | `observability/cost-metrics` |
+| `docs` | `docs/`, `README.md`, this file | `docs/runbook` |
+
+A change spanning layers takes the name of the one it is really about.
+
+## 5. Push when the change is complete
 
 Commit and push to the working branch once tests pass and the files above are in
 sync. Do not accumulate a large uncommitted working tree.
 
 Commit messages: what changed, why, and any correction to a previous claim.
 Corrections to earlier estimates or documented behaviour belong in the message
-body — that is where someone reading `git log` will look for them.
+body — that is where someone reading `git log` will look for them. Write them as
+the author of the work; no tooling attribution, trailers, or generated-by
+footers in commits, branches, code comments, or pull requests.
 
-## 5. Standing technical rules
+## 6. Standing technical rules
 
 - **Never quote model pricing, limits, or context windows from memory.** They
   change, and the values are not monotonic across generations (cache minimums:
@@ -89,7 +110,7 @@ body — that is where someone reading `git log` will look for them.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            132 tests, no network required
+tests/            160 tests, no network required
 fixtures/         offline mailbox, including one adversarial message
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```

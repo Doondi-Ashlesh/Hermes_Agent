@@ -13,6 +13,13 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-013 · A transient blip silently dropped a notification
+**Why:** the Anthropic SDK retries; the urllib paths (Ollama, Telegram) did not, so one
+refused connection lost that alert or classification outright.
+**✅ Fixed** — `http.py` retries connection errors, 408, 429 and 5xx with exponential
+backoff plus jitter, honouring `Retry-After`. Other 4xx are **not** retried: a bad token
+fails identically every time. Tests assert both halves of that policy.
+
 ### F-012 · The test suite ran only when someone remembered
 **Why:** no CI ever existed. Tests only ran when someone remembered.
 **✅ Fixed** — GitHub Actions on every push and PR: suite across Python 3.10-3.13 with
@@ -85,7 +92,7 @@ argument for enforcement below the agent.
 ### F-001 · Mermaid diagrams were nearly pushed unvalidated
 **Why:** no check existed; a syntax error would have rendered as raw text on GitHub.
 **✅ Fixed** — all blocks parsed with mermaid's own parser before push; two edge labels
-needed quoting. Now a standing rule in `CLAUDE.md`.
+needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 
 ---
 
@@ -100,6 +107,14 @@ is truly source-bound. The two differ in the *verb* (judge vs draft) and the *ac
 doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still applies to both).
 **✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
 Track A running, Track B blocked on tickets and a write scope.
+
+### D-013 · Logging for library code, printing for the CLI
+**Why:** 24 `print()` calls, no levels, no timestamps, nothing parseable — unusable for a
+daemon under systemd. `logs.py` gives text or JSON output with the level from env.
+**The split:** library code logs (telemetry, `DEBUG` shows every decision with score and
+gate rule); the CLI prints (output the user asked for, which must not vanish at a higher
+log level). Notifications stay on stdout — they're the product, not diagnostics.
+**Rejected:** a logging dependency. stdlib `logging` with two formatters is enough.
 
 ### D-011 · Docs written for replication, and tested
 **Why:** the docs explained *what* and *why* but a new engineer couldn't rebuild or
