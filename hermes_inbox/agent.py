@@ -16,8 +16,11 @@ from .classify import classify as default_classify
 from .config import Config
 from .feedback import Example, FeedbackStore
 from .gate import decide
+from .logs import get_logger
 from .schema import Decision
 from .state import DecisionLog, State
+
+log = get_logger(__name__)
 
 
 @dataclass
@@ -67,8 +70,13 @@ class Agent:
         for uid, is_important in labels:
             decision = self.log.find(uid)
             if decision is None:
+                log.warning("correction for unknown message", extra={"uid": uid})
                 errors.append(f"feedback for unknown message {uid}")
                 continue
+            log.info(
+                "correction recorded",
+                extra={"uid": uid, "label": "important" if is_important else "not-important"},
+            )
             self.feedback.add(
                 Example.from_message(decision.message, is_important, note="via notification button")
             )
@@ -103,6 +111,10 @@ class Agent:
                 # outage would silently swallow a whole mailbox. Leaving the
                 # cursor put means the next cycle retries; the error is reported
                 # every time until it clears, which is the loud failure we want.
+                log.error(
+                    "classify failed — stopping cycle without advancing the cursor",
+                    extra={"uid": message.uid, "error": str(exc)},
+                )
                 result.errors.append(
                     f"classify failed for {message.uid} ({exc}) — stopping this cycle,"
                     f" {result.fetched - len(result.errors)} message(s) left for the next one"
@@ -112,12 +124,34 @@ class Agent:
             gate = decide(message, verdict, self.config.gate)
             decision = Decision(message=message, verdict=verdict, gate=gate)
             self.log.append(decision)
+            log.debug(
+                "decided",
+                extra={
+                    "uid": message.uid,
+                    "score": verdict.score,
+                    "category": verdict.category,
+                    "rule": gate.rule,
+                    "notify": gate.notify,
+                },
+            )
 
             if gate.notify:
                 try:
                     self.notifier.send(decision)
                     result.notified += 1
+                    log.info(
+                        "notified",
+                        extra={
+                            "uid": message.uid,
+                            "sender": message.sender,
+                            "score": verdict.score,
+                            "rule": gate.rule,
+                        },
+                    )
                 except Exception as exc:
+                    log.warning(
+                        "notify failed", extra={"uid": message.uid, "error": str(exc)}
+                    )
                     result.errors.append(f"notify failed for {message.uid}: {exc}")
 
             # Persist per message, not per cycle. Held only in memory, a crash
@@ -136,13 +170,15 @@ class Agent:
             started = time.monotonic()
             result = self.cycle()
             if result.fetched or result.notified or result.labels_applied:
-                print(
-                    f"[{time.strftime('%H:%M:%S')}] "
-                    f"{result.fetched} new · {result.notified} pinged"
-                    f" · {result.labels_applied} correction(s)"
+                log.info(
+                    "cycle complete",
+                    extra={
+                        "fetched": result.fetched,
+                        "notified": result.notified,
+                        "corrections": result.labels_applied,
+                        "took": round(time.monotonic() - started, 2),
+                    },
                 )
-            for error in result.errors:
-                print(f"  ! {error}")
             cycles += 1
             if max_cycles is None or cycles < max_cycles:
                 time.sleep(max(0.0, interval - (time.monotonic() - started)))

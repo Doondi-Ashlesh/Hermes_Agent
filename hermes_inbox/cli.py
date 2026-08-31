@@ -38,7 +38,21 @@ def _notifier(config: Config, force_console: bool):
         return ConsoleNotifier()
     from .notify.telegram import TelegramNotifier
 
-    return TelegramNotifier(config.telegram_token, config.telegram_chat_id)
+    return TelegramNotifier(
+        config.telegram_token,
+        config.telegram_chat_id,
+        retries=config.http_retries,
+        backoff=config.http_backoff,
+    )
+
+
+def _configure_logging(args, config: Config) -> None:
+    from .logs import configure
+
+    configure(
+        level=getattr(args, "log_level", None) or config.log_level,
+        fmt=getattr(args, "log_format", None) or config.log_format,
+    )
 
 
 def _resolve_provider(args, config: Config):
@@ -59,6 +73,7 @@ def _resolve_provider(args, config: Config):
 
 def _build(args) -> tuple[Agent, str]:
     config = Config.from_env()
+    _configure_logging(args, config)
     if getattr(args, "threshold", None) is not None:
         config.gate.threshold = args.threshold
     classify_fn, name = _resolve_provider(args, config)
@@ -109,6 +124,7 @@ def cmd_demo(args) -> int:
     """End-to-end run against fixtures, no credentials needed."""
     config = Config.from_env()
     config.data_dir = Path(args.data_dir)
+    _configure_logging(args, config)
     from . import providers
 
     classify_fn, name = _resolve_provider(args, config)
@@ -204,6 +220,8 @@ def main(argv: list[str] | None = None) -> int:
     demo = sub.add_parser("demo", help="run against bundled fixtures (no credentials)")
     demo.add_argument("--data-dir", default="data/demo")
     demo.add_argument("--provider", choices=PROVIDERS, help="classifier to use")
+    demo.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    demo.add_argument("--log-format", choices=["text", "json"])
     demo.set_defaults(func=cmd_demo)
 
     once = sub.add_parser("once", help="one polling cycle, then exit")
@@ -211,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
     once.add_argument("--console", action="store_true", help="force console output")
     once.add_argument("--threshold", type=float, help="override the notify threshold")
     once.add_argument("--provider", choices=PROVIDERS)
+    once.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    once.add_argument("--log-format", choices=["text", "json"])
     once.set_defaults(func=cmd_once)
 
     run = sub.add_parser("run", help="poll continuously")
@@ -218,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--console", action="store_true")
     run.add_argument("--threshold", type=float)
     run.add_argument("--provider", choices=PROVIDERS)
+    run.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    run.add_argument("--log-format", choices=["text", "json"])
     run.set_defaults(func=cmd_run)
 
     feedback = sub.add_parser("feedback", help="correct a call the agent made")

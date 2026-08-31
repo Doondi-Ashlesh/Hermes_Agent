@@ -294,6 +294,8 @@ hermes_inbox/
   ollama.py       local provider
   offline.py      keyword rules; no model, used by demo and CI
   providers.py    registry: name → classify_fn
+  http.py         JSON-over-HTTP with retries for the non-SDK providers
+  logs.py         logging setup: text or json, level from env
   gate.py         ordered deterministic rules
   feedback.py     labeled examples, the correction loop
   evals.py        leave-one-out replay scoring
@@ -303,6 +305,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            132 tests, no network required
+tests/            158 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message
 ```
