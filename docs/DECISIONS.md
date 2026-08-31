@@ -92,7 +92,7 @@ argument for enforcement below the agent.
 ### F-001 · Mermaid diagrams were nearly pushed unvalidated
 **Why:** no check existed; a syntax error would have rendered as raw text on GitHub.
 **✅ Fixed** — all blocks parsed with mermaid's own parser before push; two edge labels
-needed quoting. Now a standing rule in `CLAUDE.md`.
+needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 
 ---
 

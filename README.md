@@ -88,11 +88,11 @@ something important you never saw.
 | [Plan](docs/PLAN.md) | The phase model both deployments earn their autonomy through |
 | [Decisions](docs/DECISIONS.md) | Why it is built this way, what broke, what was done about it |
 | [ADR 0001](docs/adr/0001-runtime-nemoclaw-hermes.md) | Why Hermes runs under the NVIDIA NemoClaw blueprint |
-| [CLAUDE.md](CLAUDE.md) | Working agreement: test, sync docs, log, push |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to work in this repo: test, sync docs, log, branch, push |
 
 ## Status
 
-Deployment 1 runs. 158 tests, no network or credentials required.
+Deployment 1 runs. 160 tests, no network or credentials required.
 
 Not yet done, and deliberately so: reply drafting, the NemoClaw sandbox, and
 validation against a real mailbox over a meaningful period. The open items are
