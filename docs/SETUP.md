@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-132 passed in 0.86s
+158 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.
@@ -307,6 +307,8 @@ Same corrections, same leave-one-out method — a directly comparable number.
 | Buttons do nothing | Only `run`/`once` drain them; a cycle must follow the press | Run another cycle |
 | `0 fetched` forever | Cursor is past everything | `rm data/state.json` to re-scan |
 | Nothing ever notifies | Threshold too high, or category muted | `make stats` → check `by gate rule` |
+| Can't tell why it decided something | Default level hides per-message detail | `hermes-inbox once --log-level DEBUG` |
+| Logs unreadable in `journalctl` | Text format | `HERMES_LOG_FORMAT=json`, then `journalctl -o cat \| jq` |
 | Too many alerts | Threshold too low | Raise `HERMES_THRESHOLD`, correct a few, `make eval` |
 
 Data lives in `data/`: `state.json` (cursor), `decisions.jsonl` (every call),

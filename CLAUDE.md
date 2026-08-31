@@ -89,7 +89,7 @@ body — that is where someone reading `git log` will look for them.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            132 tests, no network required
+tests/            158 tests, no network required
 fixtures/         offline mailbox, including one adversarial message
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```

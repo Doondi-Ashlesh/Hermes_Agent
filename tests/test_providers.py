@@ -19,6 +19,12 @@ from hermes_inbox.schema import Message, Verdict
 
 
 @pytest.fixture(autouse=True)
+def no_backoff(monkeypatch):
+    """Retries are real; the waiting between them must not be, in tests."""
+    monkeypatch.setattr("hermes_inbox.http._sleep", lambda seconds: None)
+
+
+@pytest.fixture(autouse=True)
 def no_credentials(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)

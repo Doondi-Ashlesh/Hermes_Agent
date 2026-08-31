@@ -24,12 +24,14 @@ Requires Ollama running locally with structured outputs (0.5+):
 from __future__ import annotations
 
 import json
-import urllib.error
-import urllib.request
 
 from .classify import SCHEMA, SYSTEM, build_system, build_user
+from .http import HttpError, post_json
+from .logs import get_logger
 from .redact import redact_message
 from .schema import Message, Verdict
+
+log = get_logger(__name__)
 
 
 class OllamaError(RuntimeError):
@@ -59,20 +61,19 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
         ],
     }
 
-    request = urllib.request.Request(
-        config.ollama_host.rstrip("/") + "/api/chat",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-    )
     try:
-        with urllib.request.urlopen(request, timeout=config.ollama_timeout) as response:
-            body = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise OllamaError(f"ollama returned {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:
+        body = post_json(
+            config.ollama_host.rstrip("/") + "/api/chat",
+            payload,
+            timeout=config.ollama_timeout,
+            retries=config.http_retries,
+            backoff=config.http_backoff,
+        )
+    except HttpError as exc:
+        if exc.status is not None:
+            raise OllamaError(f"ollama returned {exc.status}: {exc.body[:200]}") from exc
         raise OllamaError(
-            f"cannot reach ollama at {config.ollama_host} ({exc.reason}) — is `ollama serve` running?"
+            f"cannot reach ollama at {config.ollama_host} ({exc}) — is `ollama serve` running?"
         ) from exc
 
     content = (body.get("message") or {}).get("content", "")

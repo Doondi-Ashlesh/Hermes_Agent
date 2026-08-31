@@ -93,6 +93,11 @@ class Config:
     data_dir: Path = Path("data")
     max_examples: int = 40
 
+    log_level: str = "INFO"
+    log_format: str = "text"
+    http_retries: int = 3
+    http_backoff: float = 0.5
+
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = DEFAULT_OLLAMA_MODEL
     ollama_timeout: int = 120
@@ -116,6 +121,10 @@ class Config:
             model=os.environ.get("HERMES_MODEL", DEFAULT_MODEL),
             effort=os.environ.get("HERMES_EFFORT") or None,
             cache_ttl=os.environ.get("HERMES_CACHE_TTL", "1h"),
+            log_level=os.environ.get("HERMES_LOG_LEVEL", "INFO"),
+            log_format=os.environ.get("HERMES_LOG_FORMAT", "text"),
+            http_retries=_int("HERMES_HTTP_RETRIES", 3),
+            http_backoff=_float("HERMES_HTTP_BACKOFF", 0.5),
             ollama_host=os.environ.get("HERMES_OLLAMA_HOST", "http://localhost:11434"),
             ollama_model=os.environ.get("HERMES_OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
             ollama_timeout=_int("HERMES_OLLAMA_TIMEOUT", 120),
