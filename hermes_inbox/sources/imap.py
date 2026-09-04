@@ -78,12 +78,24 @@ class ImapSource:
         self.password = password
         self.folder = folder
 
+    def fetch_since(self, since: datetime, limit: int = 500) -> list[Message]:
+        """Messages received on or after `since`, oldest first.
+
+        IMAP's SINCE has day granularity and filters on the server's internal
+        date, so the window can be a little wider than asked for. Backfill
+        deduplicates against the decision log, which makes that harmless.
+        """
+        return self._fetch(f'(SINCE {since.strftime("%d-%b-%Y")})', limit)
+
     def fetch_new(self, since_uid: str | None = None, limit: int = 25) -> list[Message]:
+        criteria = f"(UID {int(since_uid) + 1}:*)" if since_uid else "(ALL)"
+        return self._fetch(criteria, limit, drop_upto=since_uid)
+
+    def _fetch(self, criteria: str, limit: int, drop_upto: str | None = None) -> list[Message]:
         with imaplib.IMAP4_SSL(self.host, self.port) as conn:
             conn.login(self.user, self.password)
             conn.select(self.folder, readonly=True)
 
-            criteria = f"(UID {int(since_uid) + 1}:*)" if since_uid else "(ALL)"
             status, data = conn.uid("SEARCH", None, criteria)
             if status != "OK" or not data or not data[0]:
                 return []
@@ -91,8 +103,8 @@ class ImapSource:
             uids = data[0].split()
             # An open-ended `n:*` range always returns at least the last UID even
             # when nothing is newer; drop anything we have already seen.
-            if since_uid:
-                uids = [u for u in uids if int(u) > int(since_uid)]
+            if drop_upto:
+                uids = [u for u in uids if int(u) > int(drop_upto)]
             uids = uids[-limit:]
 
             messages: list[Message] = []

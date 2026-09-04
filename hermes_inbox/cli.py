@@ -146,6 +146,102 @@ def cmd_demo(args) -> int:
     return 1 if result.errors else 0
 
 
+def cmd_backfill(args) -> int:
+    """Classify mail already received, so there is something to review."""
+    from datetime import datetime, timedelta, timezone
+
+    from . import providers
+
+    agent, name = _build(args)
+    since = datetime.now(timezone.utc) - timedelta(days=args.days)
+
+    try:
+        pending = [
+            m
+            for m in agent.source.fetch_since(since, args.limit)
+            if agent.log.find(m.uid) is None
+        ]
+    except NotImplementedError as exc:
+        print(f"! {exc}", file=sys.stderr)
+        return 1
+    except AttributeError:
+        print(f"! {agent.source.name} cannot query by date", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"! could not read the mailbox: {exc}", file=sys.stderr)
+        return 1
+
+    if not pending:
+        print(f"nothing new in the last {args.days} days — already classified")
+        return 0
+
+    # One model call per message costs real money, so say so before spending it.
+    print(
+        f"{len(pending)} unclassified message(s) since {since:%Y-%m-%d}"
+        f" · {providers.describe(name, agent.config)}"
+    )
+    if not args.yes and name != "offline":
+        print(f"that is {len(pending)} model call(s). continue? [y/N] ", end="", flush=True)
+        if input().strip().lower() not in ("y", "yes"):
+            print("aborted")
+            return 0
+
+    def progress(index, total, message, verdict):
+        print(f"  [{index}/{total}] {verdict.score:.2f} {verdict.category:<13} {message.subject[:46]}")
+
+    result = agent.backfill(since, limit=args.limit, on_progress=progress)
+    print(
+        f"\nclassified {result.fetched} · {result.notified} would have interrupted you"
+        f"\nreview them with: hermes-inbox list --min-score 0.5"
+    )
+    for error in result.errors:
+        print(f"  ! {error}", file=sys.stderr)
+    return 1 if result.errors else 0
+
+
+def cmd_list(args) -> int:
+    """Sorted view of what the agent has decided."""
+    config = Config.from_env()
+    decisions = list(DecisionLog(config.ensure_data_dir() / "decisions.jsonl").iter_all())
+
+    if args.category:
+        decisions = [d for d in decisions if d.verdict.category == args.category]
+    if args.min_score is not None:
+        decisions = [d for d in decisions if d.verdict.score >= args.min_score]
+    if args.needs_action:
+        decisions = [d for d in decisions if d.verdict.suggested_action]
+    if args.unlabeled:
+        labeled = {e.uid for e in FeedbackStore(config.data_dir / "feedback.jsonl").all()}
+        decisions = [d for d in decisions if d.message.uid not in labeled]
+
+    if not decisions:
+        print("nothing matches — try `hermes-inbox backfill --days 30` first")
+        return 0
+
+    key = {
+        "score": lambda d: -d.verdict.score,
+        "date": lambda d: d.message.received_at.timestamp(),
+        "sender": lambda d: d.message.sender,
+    }[args.sort]
+    decisions = sorted(decisions, key=key)[: args.limit]
+
+    for decision in decisions:
+        message, verdict = decision.message, decision.verdict
+        flag = "▲" if decision.gate.notify else " "
+        print(
+            f"{flag} {verdict.score:.2f}  {verdict.category:<13} {message.sender[:28]:<28}"
+            f"  {message.subject[:44]}"
+        )
+        print(f"      {verdict.reason[:96]}")
+        if verdict.suggested_action:
+            print(f"      → {verdict.suggested_action}   [uid {message.uid}]")
+        else:
+            print(f"      [uid {message.uid}]")
+    print(f"\n{len(decisions)} shown, sorted by {args.sort}")
+    print("label one with: hermes-inbox feedback <uid> important|not-important")
+    return 0
+
+
 def cmd_feedback(args) -> int:
     config = Config.from_env()
     data = config.ensure_data_dir()
@@ -252,6 +348,27 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--threshold", type=float)
     ev.add_argument("--provider", choices=PROVIDERS, help="compare providers on the same corrections")
     ev.set_defaults(func=cmd_eval)
+
+    backfill = sub.add_parser("backfill", help="classify mail already received (does not notify)")
+    backfill.add_argument("--days", type=int, default=30, help="how far back to reach")
+    backfill.add_argument("--limit", type=int, default=500, help="cap on messages fetched")
+    backfill.add_argument("--yes", action="store_true", help="skip the cost confirmation")
+    backfill.add_argument("--fixtures", action="store_true")
+    backfill.add_argument("--console", action="store_true")
+    backfill.add_argument("--threshold", type=float)
+    backfill.add_argument("--provider", choices=PROVIDERS)
+    backfill.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    backfill.add_argument("--log-format", choices=["text", "json"])
+    backfill.set_defaults(func=cmd_backfill)
+
+    listing = sub.add_parser("list", help="sorted list of decisions, with summary and action")
+    listing.add_argument("--sort", choices=["score", "date", "sender"], default="score")
+    listing.add_argument("--limit", type=int, default=40)
+    listing.add_argument("--category")
+    listing.add_argument("--min-score", type=float)
+    listing.add_argument("--needs-action", action="store_true", help="only those with a suggested action")
+    listing.add_argument("--unlabeled", action="store_true", help="hide ones you already corrected")
+    listing.set_defaults(func=cmd_list)
 
     stats = sub.add_parser("stats", help="summarize what it has done so far")
     stats.set_defaults(func=cmd_stats)

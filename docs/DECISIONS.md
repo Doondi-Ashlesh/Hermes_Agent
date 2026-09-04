@@ -108,6 +108,17 @@ doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still app
 **✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
 Track A running, Track B blocked on tickets and a write scope.
 
+### D-014 · Backfill and a sorted list, before any web UI
+**Why:** the eval harness needs ~30 corrections and the live loop yields one decision per
+new message, so `O-003` was weeks out. `backfill` classifies existing mail; `list` sorts it
+by score with the summary and suggested action that were already being computed and thrown
+away. Both are terminal-only.
+**Rejected for now:** a web review UI. It would be a view over data that did not exist yet,
+and the decision log holds real senders and subjects — so it would have to be local-only
+anyway. Revisit once labelling in bulk actually hurts.
+**Backfill is deliberately inert:** notifies nobody, never moves the read cursor, skips what
+it has already classified. Tests assert all three.
+
 ### D-013 · Logging for library code, printing for the CLI
 **Why:** 24 `print()` calls, no levels, no timestamps, nothing parseable — unusable for a
 daemon under systemd. `logs.py` gives text or JSON output with the level from env.
