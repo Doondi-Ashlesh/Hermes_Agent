@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-160 passed in 0.86s
+178 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.

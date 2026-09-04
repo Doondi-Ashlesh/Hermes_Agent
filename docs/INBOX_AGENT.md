@@ -43,6 +43,8 @@ a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, se
 | `hermes-inbox run` | Poll continuously |
 | `hermes-inbox feedback <uid> important\|not-important --note "..."` | Correct a call from the terminal |
 | `hermes-inbox eval` | Replay every correction and score the classifier |
+| `hermes-inbox backfill --days 30` | Classify mail already received. Does **not** notify |
+| `hermes-inbox list` | Sorted list of decisions with summary and suggested action |
 | `hermes-inbox stats` | What it has processed, by category and by gate rule |
 
 All of `demo`, `once` and `run` accept `--log-level DEBUG` and `--log-format json`.
@@ -65,6 +67,27 @@ There is no fine-tuning and no weight update. What happens is:
 
 So it stops making a mistake because you told it not to, and the telling
 persists. That is a real feedback loop, and it is also the whole of it.
+
+### Getting to 30 corrections without waiting a week
+
+The live loop produces one decision per new message, so a useful eval score is
+weeks away. `backfill` classifies mail you already have:
+
+```bash
+hermes-inbox backfill --days 30      # asks before spending model calls
+hermes-inbox list --unlabeled --min-score 0.5
+hermes-inbox feedback <uid> important --note "why"
+```
+
+Backfill deliberately does three things differently from the live loop: it
+notifies nobody, it leaves the read cursor alone so it cannot make `run` skip
+new mail, and it skips messages already in the decision log so it is safe to
+re-run.
+
+`list` sorts by score by default (`--sort date|sender`) and filters with
+`--category`, `--min-score`, `--needs-action` and `--unlabeled`. Each row shows
+the one-line summary and the suggested action that were already computed at
+classification time.
 
 ### Why the eval harness is the important half
 

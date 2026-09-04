@@ -88,6 +88,12 @@ def test_gmail_source_respects_since_uid():
     assert [m.uid for m in messages] == ["110", "111", "112"]
 ```
 
+**Optional:** implement `fetch_since(since, limit)` too if the source can query
+by date — that is what `backfill` uses. It is a separate method because the live
+loop walks forward by uid while backfill walks backward by date, and one cursor
+cannot serve both. A source without it fails backfill loudly rather than
+returning nothing.
+
 **Gotcha:** `uid` is the cursor. It must be monotonic and comparable the same way
 `State.last_uid` stores it (a string). IMAP UIDs are integers-as-strings; Gmail
 message ids are not ordered, so a Gmail source needs `historyId` or an internal
@@ -305,6 +311,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            160 tests, no network required
+tests/            178 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message
 ```

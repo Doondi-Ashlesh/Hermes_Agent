@@ -162,6 +162,51 @@ class Agent:
 
         return result
 
+    def backfill(self, since, limit: int = 500, on_progress=None) -> CycleResult:
+        """Classify mail already received, without notifying anyone.
+
+        Exists because the eval harness needs ~30 corrections and the live loop
+        only produces one decision per new message. Backfilling a month of
+        history turns "wait a week" into "label your existing mail".
+
+        Three deliberate differences from `cycle`:
+        - nothing is notified; this is about producing decisions to review
+        - the read cursor is untouched, so it cannot make the live loop skip mail
+        - messages already in the decision log are skipped, so it is re-runnable
+        """
+        result = CycleResult()
+
+        fetch_since = getattr(self.source, "fetch_since", None)
+        if fetch_since is None:
+            raise NotImplementedError(
+                f"{self.source.name} cannot query by date; backfill needs fetch_since"
+            )
+
+        messages = [m for m in fetch_since(since, limit) if self.log.find(m.uid) is None]
+        result.fetched = len(messages)
+        examples = self.feedback.recent(self.config.max_examples)
+
+        for index, message in enumerate(messages, 1):
+            try:
+                verdict = self.classify_fn(message, examples, self.config, client=self.client)
+            except Exception as exc:
+                log.error("classify failed during backfill", extra={"uid": message.uid, "error": str(exc)})
+                result.errors.append(f"classify failed for {message.uid}: {exc}")
+                break
+
+            gate = decide(message, verdict, self.config.gate)
+            self.log.append(Decision(message=message, verdict=verdict, gate=gate))
+            if gate.notify:
+                result.notified += 1  # counted as "would have", never sent
+            if on_progress:
+                on_progress(index, len(messages), message, verdict)
+
+        log.info(
+            "backfill complete",
+            extra={"classified": result.fetched, "would_have_notified": result.notified},
+        )
+        return result
+
     def run(self, interval: int | None = None, max_cycles: int | None = None) -> None:
         """Poll forever (or `max_cycles` times, for tests)."""
         interval = self.config.interval if interval is None else interval

@@ -7,6 +7,7 @@ provider, which is what makes `hermes-inbox demo` and the test suite possible.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from ..schema import Message
@@ -27,3 +28,6 @@ class FixtureSource:
         if since_uid is not None:
             messages = [m for m in messages if int(m.uid) > int(since_uid)]
         return messages[:limit]
+
+    def fetch_since(self, since, limit: int = 500) -> list[Message]:
+        return [m for m in self._load() if m.received_at >= since][:limit]
