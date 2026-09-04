@@ -85,9 +85,13 @@ sync. Do not accumulate a large uncommitted working tree.
 
 Commit messages: what changed, why, and any correction to a previous claim.
 Corrections to earlier estimates or documented behaviour belong in the message
-body — that is where someone reading `git log` will look for them. Write them as
-the author of the work; no tooling attribution, trailers, or generated-by
-footers in commits, branches, code comments, or pull requests.
+body — that is where someone reading `git log` will look for them.
+
+**Attribution.** Tooling trailers on commits and pull requests are fine and are
+git metadata, not content. What stays clean is the repository itself: no
+attribution, tool names, or generated-by markers inside source, comments, docs,
+or branch names. `test_no_tooling_attribution_in_tracked_content` enforces the
+tracked-file half; the branch-naming table above covers the other.
 
 ## 6. Standing technical rules
 
