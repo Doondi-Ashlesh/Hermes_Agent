@@ -302,6 +302,7 @@ hermes_inbox/
   providers.py    registry: name → classify_fn
   http.py         JSON-over-HTTP with retries for the non-SDK providers
   logs.py         logging setup: text or json, level from env
+  doctor.py       preflight checks; reads only, never prints a secret
   gate.py         ordered deterministic rules
   feedback.py     labeled examples, the correction loop
   evals.py        leave-one-out replay scoring
@@ -311,6 +312,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            178 tests, no network required
+tests/            195 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message
 ```

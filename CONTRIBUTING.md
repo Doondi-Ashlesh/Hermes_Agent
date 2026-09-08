@@ -72,7 +72,7 @@ being added, in kebab-case. The layers are the ones in
 | `policy` | `gate.py` | `policy/sentiment-trigger` |
 | `delivery` | `notify/` | `delivery/whatsapp-notifier` |
 | `learning` | `feedback.py`, `evals.py` | `learning/correction-pruning` |
-| `runtime` | `agent.py`, `state.py`, `cli.py`, `config.py` | `runtime/concurrent-classify` |
+| `runtime` | `agent.py`, `state.py`, `cli.py`, `config.py`, `doctor.py` | `runtime/concurrent-classify` |
 | `observability` | `logs.py`, `http.py` | `observability/cost-metrics` |
 | `docs` | `docs/`, `README.md`, this file | `docs/runbook` |
 
@@ -114,7 +114,7 @@ tracked-file half; the branch-naming table above covers the other.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            178 tests, no network required
+tests/            195 tests, no network required
 fixtures/         offline mailbox, including one adversarial message
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```

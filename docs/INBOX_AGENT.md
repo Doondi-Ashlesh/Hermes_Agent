@@ -45,6 +45,7 @@ a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, se
 | `hermes-inbox eval` | Replay every correction and score the classifier |
 | `hermes-inbox backfill --days 30` | Classify mail already received. Does **not** notify |
 | `hermes-inbox list` | Sorted list of decisions with summary and suggested action |
+| `hermes-inbox doctor` | Check the setup and print the single next thing to do |
 | `hermes-inbox stats` | What it has processed, by category and by gate rule |
 
 All of `demo`, `once` and `run` accept `--log-level DEBUG` and `--log-format json`.
