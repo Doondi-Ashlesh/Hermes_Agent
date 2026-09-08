@@ -108,6 +108,16 @@ doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still app
 **✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
 Track A running, Track B blocked on tickets and a write scope.
 
+### D-015 · A doctor command, and a LICENSE file
+**Why (doctor):** every setup failure so far — wrong Gmail password, Ollama not running,
+silent fallback to keyword rules — was diagnosable only by running the thing and reading a
+traceback. `doctor` answers "what is missing and what do I type next" before any credential
+exists, which is when it matters most.
+**Two invariants, both tested:** it never prints a secret (values are masked or reported as
+present/absent) and it never writes anything.
+**Why (LICENSE):** `pyproject.toml` declared MIT with no LICENSE file, so the repo was
+effectively unlicensed. Fixed.
+
 ### D-014 · Backfill and a sorted list, before any web UI
 **Why:** the eval harness needs ~30 corrections and the live loop yields one decision per
 new message, so `O-003` was weeks out. `backfill` classifies existing mail; `list` sorts it

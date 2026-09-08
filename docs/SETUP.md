@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-178 passed in 0.86s
+195 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.
@@ -76,6 +76,20 @@ That run used keyword rules, not a model. Everything below replaces them.
 ---
 
 ## Step 3 — Configure
+
+At any point from here, `hermes-inbox doctor` tells you what is still missing
+and the one command to run next. It reads only — it never writes config, sends
+anything, or prints a secret.
+
+```
+  ✓ .env            found
+  ✗ mailbox         not configured — missing IMAP_PASSWORD
+                      → Gmail needs a 16-char App Password (SETUP.md §3b)
+  ! notifier        telegram not configured — alerts will print to the console
+
+  1 thing(s) to fix before it can run.
+  next: Gmail needs a 16-char App Password (SETUP.md §3b)
+```
 
 ```bash
 cp .env.example .env
@@ -296,6 +310,9 @@ Same corrections, same leave-one-out method — a directly comparable number.
 ---
 
 ## Troubleshooting
+
+Run `hermes-inbox doctor` first — it identifies most of the table below
+directly, including a wrong Gmail password.
 
 | Symptom | Cause | Fix |
 |---|---|---|

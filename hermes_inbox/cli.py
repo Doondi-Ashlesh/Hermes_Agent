@@ -276,6 +276,24 @@ def cmd_eval(args) -> int:
     return 0
 
 
+def cmd_doctor(args) -> int:
+    """What is stopping this from running, and what to type next."""
+    from . import doctor
+
+    config = Config.from_env()
+    _configure_logging(args, config)
+    report = doctor.run(config, login=not args.no_login)
+
+    print(report.render())
+    print()
+    if report.ready:
+        print("ready to run.")
+    else:
+        print(f"{len(report.failures)} thing(s) to fix before it can run.")
+    print(f"next: {doctor.next_step(report, config)}")
+    return 0 if report.ready else 1
+
+
 def cmd_stats(args) -> int:
     config = Config.from_env()
     data = config.ensure_data_dir()
@@ -369,6 +387,12 @@ def main(argv: list[str] | None = None) -> int:
     listing.add_argument("--needs-action", action="store_true", help="only those with a suggested action")
     listing.add_argument("--unlabeled", action="store_true", help="hide ones you already corrected")
     listing.set_defaults(func=cmd_list)
+
+    doc = sub.add_parser("doctor", help="check the setup and say what to do next")
+    doc.add_argument("--no-login", action="store_true", help="skip the IMAP login attempt")
+    doc.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    doc.add_argument("--log-format", choices=["text", "json"])
+    doc.set_defaults(func=cmd_doctor)
 
     stats = sub.add_parser("stats", help="summarize what it has done so far")
     stats.set_defaults(func=cmd_stats)
