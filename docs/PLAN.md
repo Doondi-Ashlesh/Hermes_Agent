@@ -18,7 +18,9 @@ trust ladder, not a build order for a single product.
 | Sandbox | Not yet load-bearing ([D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)) | Load-bearing from day one |
 | Status | **Running** | Not started |
 
-## Status — 2026-08-27
+## Status
+
+*Last reviewed 2026-09-09.*
 
 **Track A** has the machinery built and running: ingestion, redaction, judgement,
 policy gate, notification, correction loop, eval harness. What remains is
@@ -26,9 +28,16 @@ validation — every accuracy claim is against 12 fixtures until it has scored a
 mailbox ([O-003](DECISIONS.md#o-003--not-validated-against-real-mail)).
 
 **Track B** has not started. It is blocked on two things, and neither is the runtime:
-a corpus of real tickets, and the write scope that drafting requires. Phase 0 is
-additionally waiting on three ADR questions — no longer on hardware
-([F-006](DECISIONS.md#f-006--adr-0001-claimed-dgx-class-hardware-was-required)).
+a corpus of real tickets, and the write scope that drafting requires.
+
+Phase 0 is no longer blocked on research. All five of ADR 0001's open questions are now
+answered ([2026-09-09 amendment](adr/0001-runtime-nemoclaw-hermes.md#amendment-2026-09-09));
+what remains is the stock install itself, the runbook, and version pins.
+
+One answer changes Track B's shape: egress policy can express method and path on HTTP
+traffic but only host, port and binary on raw TLS, so the sandbox cannot separate reading
+from sending over IMAP/SMTP. Drafting therefore has to move the source to the Gmail HTTP
+API — see [D-016](DECISIONS.md#d-016--drafting-forces-the-source-off-imap).
 
 Because Track A shares the phase model, it has already cleared the substance of
 several phases against its own source:
@@ -110,9 +119,10 @@ mapping is in the status table above; where a phase says "ticket", read "message
 
 ### Phase 0 — Blueprint spike
 
-> **Partially unblocked.** Two of ADR 0001's five questions are answered
-> ([amendment](adr/0001-runtime-nemoclaw-hermes.md#amendment-2026-08-27)); Q3–Q5 remain and
-> are answerable from NemoClaw's committed `docs/**/*.mdx`.
+> **Research complete.** All five of ADR 0001's questions are answered
+> ([2026-08-27](adr/0001-runtime-nemoclaw-hermes.md#amendment-2026-08-27),
+> [2026-09-09](adr/0001-runtime-nemoclaw-hermes.md#amendment-2026-09-09)). What is left is
+> the install, the runbook and the version pins.
 
 Resolve the open questions in ADR 0001 against NVIDIA's primary documentation, then stand up
 the stock blueprint with no customization: NemoClaw installed, Hermes running under OpenShell,
