@@ -1,10 +1,13 @@
 # ADR 0001: Build the support agent on Hermes Agent under the NVIDIA NemoClaw blueprint
 
-- **Status:** Accepted — amended 2026-08-27
+- **Status:** Accepted — amended 2026-08-27, 2026-09-09
 - **Date:** 2026-08-24
 - **Deciders:** Project owner
-- **Amendments:** [2026-08-27](#amendment-2026-08-27) — Q1 and Q2 answered; the
-  deployment-floor cost was overstated and has been corrected
+- **Amendments:**
+  [2026-08-27](#amendment-2026-08-27) — Q1 and Q2 answered; the deployment-floor cost
+  was overstated and has been corrected.
+  [2026-09-09](#amendment-2026-09-09) — Q3, Q4 and Q5 answered. Egress granularity turns
+  out to be protocol-dependent, which changes how reply drafting must be built.
 
 ## Context
 
@@ -114,12 +117,10 @@ was written. Each must be confirmed against primary sources before Phase 0 exits
 
 1. ~~**Prerequisites.**~~ **Answered 2026-08-27 — see amendment.**
 2. ~~**Inference providers.**~~ **Answered 2026-08-27 — see amendment.**
-3. **Egress policy granularity.** Whether policy is expressible per-destination with
-   operator approval at the granularity the escalation design needs.
-4. **Gateway networking.** How the Hermes messaging gateway's inbound connections interact
-   with sandbox network policy.
-5. **The `nemoclaw-light` Hermes skin.** The README mentions a managed skin installed when
-   connecting from light terminals; its relevance to a gateway-driven deployment is unclear.
+3. ~~**Egress policy granularity.**~~ **Answered 2026-09-09 — see amendment.**
+4. ~~**Gateway networking.**~~ **Answered 2026-09-09 — see amendment**, with one detail
+   still undocumented.
+5. ~~**The `nemoclaw-light` Hermes skin.**~~ **Answered 2026-09-09 — not relevant.**
 
 ## Amendment 2026-08-27
 
@@ -162,11 +163,88 @@ open decision 2 in `PLAN.md` (model) is constrained only by preference. Local se
 Ollama is also the free path used by the inbox agent today
 (`docs/INBOX_AGENT.md`, D-010).
 
-### Still open
+### Still open at the time of that amendment
 
-Q3 (egress policy granularity), Q4 (gateway networking), and Q5 (`nemoclaw-light`) remain
-unanswered. All three are answerable from the same source. They do not block the inbox
-agent, which runs outside the sandbox by design (D-005); they do block Phase 0 exit.
+Q3, Q4 and Q5 — all closed in the amendment below.
+
+## Amendment 2026-09-09
+
+The remaining three questions, answered from the same source: NemoClaw's documentation is
+committed to its repository as `docs/**/*.mdx` and readable over `raw.githubusercontent.com`,
+which is the route around `docs.nvidia.com` being unreachable.
+
+### Q3 — Egress policy granularity: answered, and it is protocol-dependent
+
+This is the important one, because the answer is not uniform.
+
+| Traffic | What policy can express |
+|---|---|
+| HTTP / HTTPS | host **+ port + method + path + calling binary** |
+| Raw TLS (IMAP, SMTP) | host **+ port + binary only** |
+
+From `docs/network-policy/customize-network-policy.mdx`: "Adding a host to the egress policy
+permits a connection only when the endpoint, port, method, and binary rules match." The
+built-in `tavily` preset demonstrates the fine end of that — it "permits only `POST /search`
+and `POST /extract`" to one host, which is precisely allow-one-path / deny-another on the
+same host.
+
+But `docs/network-policy/set-up-gmail-with-an-app-password.mdx` draws the limit: the `gmail`
+preset "allows only `/usr/bin/python3` to open raw TLS connections to `imap.gmail.com:993`
+and `smtp.gmail.com:465`", and "OpenShell enforces the hosts, ports, and binary, but it
+cannot inspect individual IMAP or SMTP commands inside the encrypted connections." The stock
+preset therefore opens **read and send together**, with no way to separate them.
+
+The canonical schema lives in the OpenShell Policy Schema reference, still unreachable from
+here. Presets can be inspected without it:
+`nemoclaw <sandbox> policy add <preset> --dry-run`.
+
+**Consequence, and it changes a plan.**
+[F-002](../DECISIONS.md#f-002--expected-a-gmail-read-and-draft-but-cannot-send-scope)
+established that Gmail has no OAuth scope granting read-and-draft while being incapable of
+sending, so once reply drafting is added, "cannot send" stops being a property of the
+credential and has to become a policy guarantee. Q3 now says **where that guarantee is
+achievable: only over the HTTP API.** Across IMAP/SMTP the sandbox is blind to what happens
+inside the TLS session, and the stock preset grants both at once.
+
+So the drafting phase forces a source change: **IMAP is the right choice for read-only
+triage and the wrong one for drafting.** Track B needs `sources/gmail.py` on the HTTP API —
+the recipe in [EXTENDING.md](../EXTENDING.md) — not because of features, but because it is
+the only layer at which the sandbox can enforce drafts-yes-send-no. That was not visible
+when [D-002](../DECISIONS.md#d-002--imap-before-the-gmail-api) chose IMAP, and it does not
+invalidate that choice for what the inbox agent does today.
+
+### Q4 — Gateway networking: answered, with one detail undocumented
+
+The question was framed around *inbound* connections, and that framing was wrong. From
+`docs/manage-sandboxes/messaging-channels.mdx`: channel configuration is baked into the
+sandbox image at build time, channels are managed by host-side `nemoclaw` commands rather
+than through exposed sandbox ports, and each channel requires "the matching network policy
+preset or equivalent custom **egress** rules".
+
+There is no inbound listener to reason about. Messaging channels are an egress concern,
+handled by a per-channel preset like any other destination.
+
+**Still undocumented:** the transport model — whether a channel polls, receives webhooks, or
+holds a persistent connection. The committed docs do not say. It does not block Phase 0,
+because either way the traffic is covered by that channel's egress preset. Sources also
+differ slightly on whether `channels add` applies the preset automatically or expects it to
+be selected; worth confirming during the Phase 0 install rather than from documentation.
+
+### Q5 — `nemoclaw-light`: answered, and not relevant
+
+It is a terminal *rendering* skin. When connecting to a Hermes sandbox from a light
+terminal, NemoClaw may install a managed `nemoclaw-light` skin so assistant text stays
+readable, removes that managed state when the terminal no longer needs it, and preserves any
+user-selected Hermes skin.
+
+Purely cosmetic and scoped to interactive TTY sessions. No bearing on a gateway-driven
+deployment. The ADR flagged its relevance as unclear; the answer is that it has none.
+
+### Where this leaves Phase 0
+
+All five questions are now answered. What remains for Phase 0 exit is not research: the
+stock install, the runbook recording what it actually produces, and version pins in
+`deploy/`. That needs a host and an afternoon, not more reading.
 
 ## Notes
 

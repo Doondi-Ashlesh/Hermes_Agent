@@ -157,6 +157,13 @@ Two independent controls stand between untrusted input and any outbound effect:
 The gate is the control; the egress policy is what makes it survivable when the gate is wrong.
 Prompt-level instructions are treated as UX, not as controls.
 
+**How fine that second control can get depends on the protocol.** Over HTTP it matches on
+host, port, method, path and calling binary — enough to allow one endpoint on a host and deny
+another. Over raw TLS (IMAP, SMTP) it matches only host, port and binary, because the sandbox
+cannot see inside the session. So "may draft, may not send" is enforceable against an HTTP
+mail API and not against IMAP/SMTP
+([D-016](DECISIONS.md#d-016--drafting-forces-the-source-off-imap)).
+
 ## 4. Ticket lifecycle
 
 ```mermaid
@@ -301,7 +308,7 @@ Phase dependencies for Track B, the support agent. Each phase has an exit criter
 
 Track A runs alongside this rather than inside it, and has already cleared the substance of
 phases 1–5 against its own source — see the mapping table in
-[PLAN](PLAN.md#status--2026-08-27). It skips Phase 0 deliberately: with no write scope, there
+[PLAN](PLAN.md#status). It skips Phase 0 deliberately: with no write scope, there
 is nothing for the sandbox to contain
 ([D-005](DECISIONS.md#d-005--ship-outside-the-nemoclaw-sandbox-for-now)).
 

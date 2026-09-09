@@ -108,6 +108,15 @@ doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still app
 **✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
 Track A running, Track B blocked on tickets and a write scope.
 
+### D-016 · Drafting forces the source off IMAP
+**Why:** egress policy granularity is protocol-dependent — method and path on HTTP, but only
+host/port/binary on raw TLS, because OpenShell cannot see inside the TLS session. The stock
+`gmail` preset opens IMAP 993 and SMTP 465 together with no read/send split.
+**Consequence:** F-002 said "cannot send" must become a policy guarantee once drafting
+exists; this says that guarantee is only achievable over the Gmail HTTP API. Track B needs
+`sources/gmail.py`. Does not affect the read-only inbox agent, and does not invalidate
+D-002 for what it does today.
+
 ### D-015 · A doctor command, and a LICENSE file
 **Why (doctor):** every setup failure so far — wrong Gmail password, Ollama not running,
 silent fallback to keyword rules — was diagnosable only by running the thing and reading a
@@ -198,9 +207,11 @@ swap-the-source claim rather than working around it.
 Every accuracy claim is against 12 fixtures. Gates the next phase: strong recall → reply
 drafting; weak recall → per-sender memory first.
 
-### O-002 · Three ADR 0001 questions still open
-Egress granularity, gateway networking, `nemoclaw-light`. Answerable from NemoClaw's
-committed docs (route in F-006). Blocks Phase 0 exit, not current work.
+### O-002 · Phase 0 install not done
+All five ADR 0001 questions are now answered (2026-09-09 amendment), so what blocks Phase 0
+exit is the stock install, runbook and version pins — a host and an afternoon, not research.
+One detail stayed undocumented: whether a messaging channel polls or receives webhooks.
+Either is covered by that channel's egress preset, so confirm it during the install.
 
 ### O-001 · Corrections grow unboundedly
 `HERMES_MAX_EXAMPLES` caps what reaches the prompt; no pruning or conflict detection.

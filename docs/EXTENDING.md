@@ -46,7 +46,11 @@ Three invariants worth knowing before you change anything:
 
 ## Recipe: a new mail source
 
-Implement one method. Gmail API instead of IMAP, as a worked example.
+Implement one method. Gmail API instead of IMAP — a worked example, and the one
+Track B actually needs: sandbox egress policy can express method and path on HTTP
+traffic but only host, port and binary on raw TLS, so "may draft, may not send"
+is enforceable over the Gmail HTTP API and **not** over IMAP/SMTP
+([D-016](DECISIONS.md#d-016--drafting-forces-the-source-off-imap)).
 
 **1. Write it** — `hermes_inbox/sources/gmail.py`:
 
