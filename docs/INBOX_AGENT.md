@@ -44,6 +44,7 @@ a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, se
 | `hermes-inbox feedback <uid> important\|not-important --note "..."` | Correct a call from the terminal |
 | `hermes-inbox eval` | Replay every correction and score the classifier |
 | `hermes-inbox backfill --days 30` | Classify mail already received. Does **not** notify |
+| `hermes-inbox backfill --concurrency 8` | Same, wider. Default 4; `1` is serial |
 | `hermes-inbox list` | Sorted list of decisions with summary and suggested action |
 | `hermes-inbox doctor` | Check the setup and print the single next thing to do |
 | `hermes-inbox stats` | What it has processed, by category and by gate rule |
@@ -84,6 +85,16 @@ Backfill deliberately does three things differently from the live loop: it
 notifies nobody, it leaves the read cursor alone so it cannot make `run` skip
 new mail, and it skips messages already in the decision log so it is safe to
 re-run.
+
+It also classifies in parallel — 300 messages at ~2s a call is ten minutes
+serially and about two and a half at the default concurrency of 4. Decisions are
+still written in message order, so the log stays ordered however the calls
+finish. **The live loop is always serial** and stays that way: it advances an
+ordered cursor after every message, and reordering that is exactly how
+[F-004](DECISIONS.md#f-004--a-provider-outage-would-have-discarded-the-mailbox)
+and [F-009](DECISIONS.md#f-009--a-crash-mid-cycle-re-sent-every-notification-since-the-last-save)
+happened. Raise `--concurrency` if your provider tolerates it; lower it to `1`
+if you hit rate limits.
 
 `list` sorts by score by default (`--sort date|sender`) and filters with
 `--category`, `--min-score`, `--needs-action` and `--unlabeled`. Each row shows

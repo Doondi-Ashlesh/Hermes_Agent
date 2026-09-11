@@ -108,6 +108,16 @@ doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still app
 **✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
 Track A running, Track B blocked on tickets and a write scope.
 
+### D-017 · Backfill classifies in parallel; the live loop never will
+**Why:** backfill is latency-bound on hundreds of independent calls — 300 messages at ~2s
+is ten minutes serially, ~2.5 at concurrency 4. Measured 0.61s → 0.15s on a 12-message
+simulation.
+**Why not the live loop:** it advances a strictly ordered cursor after every message, which
+is precisely what F-004 and F-009 were about. Backfill touches no cursor, which is what makes
+parallelism safe there and not here.
+**Order is preserved anyway** — results are consumed in message order, so the decision log
+stays ordered however the calls complete. First failure cancels the rest.
+
 ### D-016 · Drafting forces the source off IMAP
 **Why:** egress policy granularity is protocol-dependent — method and path on HTTP, but only
 host/port/binary on raw TLS, because OpenShell cannot see inside the TLS session. The stock
