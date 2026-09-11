@@ -228,3 +228,116 @@ def test_backfill_does_not_write_state_json(capsys):
     seed(capsys)
     data = Path(json.loads('"' + str(Path.cwd() / "data") + '"'))
     assert not (data / "state.json").exists() or State(data / "state.json").last_uid("fixtures") is None
+
+
+# --------------------------------------------------------------------------- #
+# concurrency
+# --------------------------------------------------------------------------- #
+
+
+def sleeping(delays: dict[str, float], calls=None):
+    """Classifier that takes a per-message amount of time."""
+    import threading
+    import time
+
+    def classify(message, examples, config, client=None):
+        if calls is not None:
+            calls.append((message.uid, threading.current_thread().name))
+        time.sleep(delays.get(message.uid, 0.02))
+        return Verdict(True, 0.9, "personal", "reason", "do the thing")
+
+    return classify
+
+
+def test_parallel_and_serial_agree(tmp_path):
+    """Concurrency must not change a single decision."""
+    serial = make_agent(tmp_path / "a", classify_fn=scoring({"103": 0.9, "110": 0.8}))
+    parallel = make_agent(tmp_path / "b", classify_fn=scoring({"103": 0.9, "110": 0.8}))
+
+    r1 = serial.backfill(LONG_AGO, concurrency=1)
+    r2 = parallel.backfill(LONG_AGO, concurrency=4)
+
+    assert (r1.fetched, r1.notified) == (r2.fetched, r2.notified)
+    assert [d.message.uid for d in serial.log.all()] == [d.message.uid for d in parallel.log.all()]
+    assert [d.verdict.score for d in serial.log.all()] == [d.verdict.score for d in parallel.log.all()]
+
+
+def test_results_are_recorded_in_message_order_not_completion_order(tmp_path):
+    """The first message is slowest, so completion order is inverted."""
+    agent = make_agent(tmp_path, classify_fn=sleeping({"101": 0.25}))
+    agent.backfill(LONG_AGO, concurrency=8)
+
+    uids = [d.message.uid for d in agent.log.all()]
+    assert uids[0] == "101", "slowest message must still be logged first"
+    assert uids == sorted(uids, key=int)
+
+
+def test_concurrency_actually_parallelises(tmp_path):
+    """Eight messages at 50ms each: serial is ~400ms, four workers ~100ms."""
+    import time
+
+    agent = make_agent(tmp_path, classify_fn=sleeping({}, None))
+    delays = {m.uid: 0.05 for m in FixtureSource(FIXTURES).fetch_new()}
+    agent.classify_fn = sleeping(delays)
+
+    start = time.monotonic()
+    agent.backfill(LONG_AGO, limit=8, concurrency=4)
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 0.3, f"8 x 50ms across 4 workers took {elapsed:.2f}s — not parallel"
+
+
+def test_serial_mode_uses_no_threads(tmp_path):
+    import threading
+
+    calls: list[tuple[str, str]] = []
+    agent = make_agent(tmp_path, classify_fn=sleeping({}, calls))
+    agent.backfill(LONG_AGO, concurrency=1)
+
+    assert calls, "classifier should have run"
+    assert {thread for _, thread in calls} == {threading.current_thread().name}
+
+
+def test_failure_under_concurrency_stops_and_records_nothing_past_it(tmp_path):
+    def explode(message, examples, config, client=None):
+        if message.uid == "105":
+            raise RuntimeError("provider down")
+        return Verdict(True, 0.9, "personal", "r")
+
+    agent = make_agent(tmp_path, classify_fn=explode)
+    result = agent.backfill(LONG_AGO, concurrency=4)
+
+    assert any("105" in e for e in result.errors)
+    logged = [d.message.uid for d in agent.log.all()]
+    assert logged == ["101", "102", "103", "104"], f"wrote past the failure: {logged}"
+
+
+def test_concurrency_leaves_the_cursor_alone(tmp_path):
+    """The property that makes parallelism safe here in the first place."""
+    agent = make_agent(tmp_path)
+    agent.backfill(LONG_AGO, concurrency=8)
+    assert agent.state.last_uid("fixtures") is None
+
+
+def test_concurrency_still_skips_already_classified(tmp_path):
+    agent = make_agent(tmp_path)
+    assert agent.backfill(LONG_AGO, concurrency=4).fetched == 12
+    assert agent.backfill(LONG_AGO, concurrency=4).fetched == 0
+
+
+def test_concurrency_defaults_come_from_config(tmp_path):
+    from hermes_inbox.config import Config
+
+    assert Config().concurrency == 4
+    agent = Agent(
+        source=FixtureSource(FIXTURES),
+        notifier=StubNotifier(),
+        config=Config(data_dir=tmp_path, gate=GateConfig(threshold=0.5), concurrency=1),
+        classify_fn=scoring({}),
+    )
+    assert agent.backfill(LONG_AGO).fetched == 12
+
+
+def test_zero_or_negative_concurrency_falls_back_to_serial(tmp_path):
+    agent = make_agent(tmp_path)
+    assert agent.backfill(LONG_AGO, concurrency=0).fetched == 12

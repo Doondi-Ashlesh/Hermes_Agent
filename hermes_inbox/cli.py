@@ -189,7 +189,9 @@ def cmd_backfill(args) -> int:
     def progress(index, total, message, verdict):
         print(f"  [{index}/{total}] {verdict.score:.2f} {verdict.category:<13} {message.subject[:46]}")
 
-    result = agent.backfill(since, limit=args.limit, on_progress=progress)
+    result = agent.backfill(
+        since, limit=args.limit, on_progress=progress, concurrency=args.concurrency
+    )
     print(
         f"\nclassified {result.fetched} · {result.notified} would have interrupted you"
         f"\nreview them with: hermes-inbox list --min-score 0.5"
@@ -371,6 +373,9 @@ def main(argv: list[str] | None = None) -> int:
     backfill.add_argument("--days", type=int, default=30, help="how far back to reach")
     backfill.add_argument("--limit", type=int, default=500, help="cap on messages fetched")
     backfill.add_argument("--yes", action="store_true", help="skip the cost confirmation")
+    backfill.add_argument(
+        "--concurrency", type=int, help="parallel classifications (default 4; 1 is serial)"
+    )
     backfill.add_argument("--fixtures", action="store_true")
     backfill.add_argument("--console", action="store_true")
     backfill.add_argument("--threshold", type=float)

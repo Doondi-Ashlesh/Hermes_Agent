@@ -162,7 +162,13 @@ class Agent:
 
         return result
 
-    def backfill(self, since, limit: int = 500, on_progress=None) -> CycleResult:
+    def backfill(
+        self,
+        since,
+        limit: int = 500,
+        on_progress=None,
+        concurrency: int | None = None,
+    ) -> CycleResult:
         """Classify mail already received, without notifying anyone.
 
         Exists because the eval harness needs ~30 corrections and the live loop
@@ -173,6 +179,13 @@ class Agent:
         - nothing is notified; this is about producing decisions to review
         - the read cursor is untouched, so it cannot make the live loop skip mail
         - messages already in the decision log are skipped, so it is re-runnable
+
+        Classification runs across `concurrency` threads. It is worth doing here
+        and **not** in `cycle`: backfill is latency-bound on hundreds of
+        independent calls and touches no cursor, whereas the live loop advances
+        a strictly ordered cursor after every message, and reordering that is how
+        F-004 and F-009 happened. Results are still recorded in message order,
+        so the decision log stays ordered regardless of completion order.
         """
         result = CycleResult()
 
@@ -185,13 +198,17 @@ class Agent:
         messages = [m for m in fetch_since(since, limit) if self.log.find(m.uid) is None]
         result.fetched = len(messages)
         examples = self.feedback.recent(self.config.max_examples)
+        workers = max(1, concurrency if concurrency is not None else self.config.concurrency)
 
-        for index, message in enumerate(messages, 1):
-            try:
-                verdict = self.classify_fn(message, examples, self.config, client=self.client)
-            except Exception as exc:
-                log.error("classify failed during backfill", extra={"uid": message.uid, "error": str(exc)})
-                result.errors.append(f"classify failed for {message.uid}: {exc}")
+        for index, (message, verdict, error) in enumerate(
+            self._classify_many(messages, examples, workers), 1
+        ):
+            if error is not None:
+                log.error(
+                    "classify failed during backfill",
+                    extra={"uid": message.uid, "error": str(error)},
+                )
+                result.errors.append(f"classify failed for {message.uid}: {error}")
                 break
 
             gate = decide(message, verdict, self.config.gate)
@@ -206,6 +223,47 @@ class Agent:
             extra={"classified": result.fetched, "would_have_notified": result.notified},
         )
         return result
+
+    def _classify_many(self, messages, examples, workers: int):
+        """Yield `(message, verdict, error)` in message order.
+
+        Serial when `workers <= 1`. Otherwise every message is submitted to a
+        thread pool — the work is network-bound, so threads are the right tool
+        and the SDK is safe to share — and results are consumed in the original
+        order. The first failure stops consumption and cancels whatever has not
+        started yet, so a dead provider costs a few in-flight calls rather than
+        the whole backlog.
+        """
+        if workers <= 1:
+            for message in messages:
+                try:
+                    yield message, self.classify_fn(
+                        message, examples, self.config, client=self.client
+                    ), None
+                except Exception as exc:
+                    yield message, None, exc
+                    return
+            return
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        pool = ThreadPoolExecutor(max_workers=workers)
+        try:
+            futures = [
+                pool.submit(self.classify_fn, message, examples, self.config, client=self.client)
+                for message in messages
+            ]
+            for message, future in zip(messages, futures):
+                try:
+                    yield message, future.result(), None
+                except Exception as exc:
+                    for pending in futures:
+                        pending.cancel()
+                    yield message, None, exc
+                    return
+        finally:
+            # Do not wait on cancelled work; a hung provider must not hang us.
+            pool.shutdown(wait=False, cancel_futures=True)
 
     def run(self, interval: int | None = None, max_cycles: int | None = None) -> None:
         """Poll forever (or `max_cycles` times, for tests)."""

@@ -97,6 +97,7 @@ class Config:
     log_format: str = "text"
     http_retries: int = 3
     http_backoff: float = 0.5
+    concurrency: int = 4
 
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = DEFAULT_OLLAMA_MODEL
@@ -125,6 +126,7 @@ class Config:
             log_format=os.environ.get("HERMES_LOG_FORMAT", "text"),
             http_retries=_int("HERMES_HTTP_RETRIES", 3),
             http_backoff=_float("HERMES_HTTP_BACKOFF", 0.5),
+            concurrency=_int("HERMES_CONCURRENCY", 4),
             ollama_host=os.environ.get("HERMES_OLLAMA_HOST", "http://localhost:11434"),
             ollama_model=os.environ.get("HERMES_OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
             ollama_timeout=_int("HERMES_OLLAMA_TIMEOUT", 120),
