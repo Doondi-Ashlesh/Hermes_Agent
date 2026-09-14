@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-204 passed in 0.86s
+234 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.
@@ -202,6 +202,37 @@ Four alerts should arrive on Telegram, each with **✅ Right call** and
 
 `getUpdates` returning `{"ok":true,"result":[]}` means step 2 was skipped.
 
+### 3d — Get the secrets out of plaintext (optional)
+
+Three of the values you just wrote are secret: `ANTHROPIC_API_KEY`,
+`IMAP_PASSWORD`, `TELEGRAM_BOT_TOKEN`. They are sitting in `.env` in the clear,
+which is fine on a laptop you alone use and poor anywhere else.
+
+```bash
+pip install 'hermes-inbox[keyring]'
+.venv/bin/hermes-inbox secrets import
+```
+
+**Verify** — each secret is reported, and none of them is printed:
+
+```
+keychain: macOS Keyring
+
+  ✓ ANTHROPIC_API_KEY    .env  (also in keyring)
+  ✓ IMAP_PASSWORD        .env  (also in keyring)
+  ✓ TELEGRAM_BOT_TOKEN   .env  (also in keyring)
+```
+
+`.env` still wins, so delete those three lines from `.env` to finish the move,
+then run it again — the sources should read `keyring`. `import` deliberately
+does not edit `.env` for you; a tool that rewrites the file holding your
+credentials can only ever lose them.
+
+No keychain on this machine — a headless server, most likely? Then skip this
+step. Everything degrades to `.env`, and a systemd unit is better served by
+`EnvironmentFile=` pointing at a root-owned `chmod 600` file. Details in
+[Where secrets live](INBOX_AGENT.md#where-secrets-live).
+
 ---
 
 ## Step 4 — Tune the gate
@@ -327,6 +358,8 @@ directly, including a wrong Gmail password.
 | Can't tell why it decided something | Default level hides per-message detail | `hermes-inbox once --log-level DEBUG` |
 | Logs unreadable in `journalctl` | Text format | `HERMES_LOG_FORMAT=json`, then `journalctl -o cat \| jq` |
 | Too many alerts | Threshold too low | Raise `HERMES_THRESHOLD`, correct a few, `make eval` |
+| Stored a secret in the keychain, nothing changed | `.env` outranks the keychain | Delete that line from `.env`; `hermes-inbox secrets` shows which source won |
+| `no OS keychain here` | Headless machine — no Keychain, no Secret Service | Expected. Keep using `.env`, or `EnvironmentFile=` in the unit |
 
 Data lives in `data/`: `state.json` (cursor), `decisions.jsonl` (every call),
 `feedback.jsonl` (your corrections). All plain text, safe to inspect. Deleting

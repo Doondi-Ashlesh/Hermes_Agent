@@ -296,6 +296,72 @@ def cmd_doctor(args) -> int:
     return 0 if report.ready else 1
 
 
+def cmd_secrets(args) -> int:
+    """Move the three secrets out of plaintext, and say where each one is now."""
+    import getpass
+
+    from . import secrets
+
+    usable, detail = secrets.available()
+
+    if args.action == "status":
+        print(f"keychain: {detail}\n")
+        for resolution in secrets.inspect():
+            if not resolution.present:
+                print(f"  – {resolution.name:<20} not set")
+                continue
+            note = f"  (also in {', '.join(resolution.shadowed)})" if resolution.shadowed else ""
+            print(f"  ✓ {resolution.name:<20} {resolution.source}{note}")
+        if not usable and any(r.source == secrets.DOTENV for r in secrets.inspect()):
+            print(f"\nno keychain to move them into: {detail}")
+        return 0
+
+    if not usable:
+        print(f"! {detail}", file=sys.stderr)
+        return 1
+
+    if args.action == "import":
+        values = secrets.dotenv_values()
+        if not values:
+            print("nothing to import — .env holds no secrets")
+            return 0
+        for name, value in values.items():
+            secrets.put(name, value)
+            print(f"stored {name} in the keychain")
+        print(
+            "\nThey are still in .env, and .env wins — delete these lines to finish:\n  "
+            + "\n  ".join(values)
+            + "\n\nNothing was written to .env: a tool that rewrites the file holding your"
+            "\ncredentials can only ever lose them. `doctor` will keep warning until"
+            "\nthose lines are gone."
+        )
+        return 0
+
+    if args.name not in secrets.SECRETS:
+        print(
+            f"! {args.name} is not a secret. Known: {', '.join(secrets.SECRETS)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.action == "rm":
+        removed = secrets.delete(args.name)
+        print(f"{'removed' if removed else 'nothing stored for'} {args.name}")
+        return 0
+
+    # `set`. The value is never a command-line argument — argv lands in shell
+    # history and in anyone's `ps` output.
+    value = getpass.getpass(f"{args.name} ({secrets.SECRETS[args.name]}): ").strip()
+    if not value:
+        print("! empty, nothing stored", file=sys.stderr)
+        return 1
+    secrets.put(args.name, value)
+    print(f"stored {args.name} in the keychain ({detail})")
+    if args.name in secrets.dotenv_values():
+        print(f"! {args.name} is still in .env, and .env wins — delete that line")
+    return 0
+
+
 def cmd_stats(args) -> int:
     config = Config.from_env()
     data = config.ensure_data_dir()
@@ -398,6 +464,18 @@ def main(argv: list[str] | None = None) -> int:
     doc.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     doc.add_argument("--log-format", choices=["text", "json"])
     doc.set_defaults(func=cmd_doctor)
+
+    sec = sub.add_parser("secrets", help="store the three secrets in the OS keychain")
+    sec.add_argument(
+        "action",
+        nargs="?",
+        default="status",
+        choices=["status", "set", "rm", "import"],
+        help="status (default), set, rm, or import the ones already in .env",
+    )
+    # Deliberately no argument for the value itself — `set` prompts for it.
+    sec.add_argument("name", nargs="?", help="ANTHROPIC_API_KEY | IMAP_PASSWORD | TELEGRAM_BOT_TOKEN")
+    sec.set_defaults(func=cmd_secrets)
 
     stats = sub.add_parser("stats", help="summarize what it has done so far")
     stats.set_defaults(func=cmd_stats)

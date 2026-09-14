@@ -32,9 +32,18 @@ def test_internal_links_and_anchors_resolve():
     assert result.returncode == 0, f"broken cross-references:\n{result.stderr}"
 
 
+# Config is not the only module that reads the environment; secrets.py reads the
+# switch that turns the keychain off.
+CONFIG_SOURCES = ("hermes_inbox/config.py", "hermes_inbox/secrets.py")
+
+
+def config_source() -> str:
+    return "\n".join(read(name) for name in CONFIG_SOURCES)
+
+
 def test_every_config_env_var_is_documented():
     """A new HERMES_*/IMAP_*/TELEGRAM_* key must appear in .env.example."""
-    config = read("hermes_inbox/config.py")
+    config = config_source()
     declared = set(re.findall(r'os\.environ\.get\(\s*"([A-Z_]+)"', config))
     declared |= set(re.findall(r'_(?:int|float|csv)\(\s*"([A-Z_]+)"', config))
     declared -= {"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"}  # SDK-resolved
@@ -46,7 +55,7 @@ def test_every_config_env_var_is_documented():
 
 def test_no_stale_env_vars_in_example():
     """And the reverse: .env.example must not advertise keys nothing reads."""
-    config = read("hermes_inbox/config.py")
+    config = config_source()
     documented = set(re.findall(r"^#?\s*([A-Z_]+)=", read(".env.example"), re.M))
     documented -= {"ANTHROPIC_API_KEY"}
     unread = {key for key in documented if key not in config}
@@ -239,8 +248,8 @@ def test_module_inventory_matches_the_package():
 
 
 def test_setup_guide_uses_real_env_vars():
-    """Every KEY=value in SETUP.md is a key config.py actually reads."""
-    config = read("hermes_inbox/config.py")
+    """Every KEY=value in SETUP.md is a key the config modules actually read."""
+    config = config_source()
     known = set(re.findall(r'"([A-Z_]+)"', config)) | {"ANTHROPIC_API_KEY"}
     used = set(re.findall(r"^([A-Z][A-Z_]{3,})=", read("docs/SETUP.md"), re.M))
     unknown = used - known

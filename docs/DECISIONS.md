@@ -13,6 +13,14 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-014 · `doctor` reported keychain secrets as coming from the environment
+**Why:** `load_into_env` copies keychain values into `os.environ`, and `inspect` ran
+afterwards and saw its own injection — reporting "environment" for exactly the secrets
+whose location the command exists to explain.
+**✅ Fixed** — the loader records what it injected and `inspect` discounts it. Caught by a
+test-isolation failure: the variable that leaked between tests leaked by the same
+write-through the real bug used.
+
 ### F-013 · A transient blip silently dropped a notification
 **Why:** the Anthropic SDK retries; the urllib paths (Ollama, Telegram) did not, so one
 refused connection lost that alert or classification outright.
@@ -107,6 +115,22 @@ is truly source-bound. The two differ in the *verb* (judge vs draft) and the *ac
 doesn't exist); dropping to inbox-only (discards ADR/PLAN framing that still applies to both).
 **✅ Done** — README, PLAN and ARCHITECTURE reframed as one machine with two deployments.
 Track A running, Track B blocked on tickets and a write scope.
+
+### D-018 · Secrets can move to the OS keychain, which is consulted last
+**Why:** the three secrets sat in plaintext `.env`, which backs up, syncs, and is readable
+by anything running as you. `keyring` puts them in Keychain / Credential Manager / Secret
+Service instead.
+**Why last in precedence (environment → `.env` → keychain):** an existing install behaves
+identically, the keychain is touched only for values nothing else supplied so an unused
+one never prompts for an unlock, and a half-finished migration keeps working from `.env`
+instead of silently reading a stale stored copy. The cost — a line left in `.env` shadows
+the keychain — is surfaced by a `doctor` warning rather than hidden.
+**Rejected:** having `import` strip the lines from `.env`. A tool that rewrites the file
+holding your credentials can only ever lose them; it prints what to delete.
+**Optional dependency on purpose:** there is no keychain on a headless server, which is
+where this most often runs. Missing, locked or broken all degrade to `.env`; none of them
+can stop the agent starting. `set` prompts rather than taking the value from argv, which
+would land in shell history and `ps`. All four properties are tested.
 
 ### D-017 · Backfill classifies in parallel; the live loop never will
 **Why:** backfill is latency-bound on hundreds of independent calls — 300 messages at ~2s

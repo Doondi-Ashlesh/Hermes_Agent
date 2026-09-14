@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import Config
+from .secrets import KEYRING
 
 OK, WARN, FAIL, SKIP = "ok", "warn", "fail", "skip"
 
@@ -177,6 +178,37 @@ def check_notifier(config: Config, report: Report) -> None:
     )
 
 
+def check_secrets(config: Config, report: Report) -> None:
+    """Where each secret comes from — never what it is.
+
+    The shadow warning is the point of this check. `.env` outranks the keychain,
+    so a secret left in the file after being stored in the keychain is still the
+    one being used, and nothing else would ever tell you.
+    """
+    from . import secrets
+
+    usable, detail = secrets.available()
+    resolutions = secrets.inspect()
+
+    report.add("keychain", OK if usable else SKIP, detail)
+
+    found = [r for r in resolutions if r.present]
+    report.add(
+        "secrets",
+        OK if found else WARN,
+        " · ".join(f"{r.name} ← {r.source}" for r in found) or "none resolved",
+        "" if found else "SETUP.md §3 — nothing is configured yet",
+    )
+
+    for shadowed in (r for r in resolutions if KEYRING in r.shadowed):
+        report.add(
+            f"  {shadowed.name}",
+            WARN,
+            f"in the keychain, but {shadowed.source} wins",
+            f"remove {shadowed.name} from {shadowed.source} to use the stored one",
+        )
+
+
 def check_gate(config: Config, report: Report) -> None:
     gate = config.gate
     bits = [f"threshold {gate.threshold:g}"]
@@ -243,6 +275,7 @@ def run(config: Config | None = None, login: bool = True) -> Report:
         "" if env.is_file() else "cp .env.example .env",
     )
 
+    check_secrets(config, report)
     check_provider(config, report)
     check_mailbox(config, report, login=login)
     check_notifier(config, report)
