@@ -166,6 +166,44 @@ def test_correction_count_drives_the_advice(tmp_path, monkeypatch):
     assert "30" in check.detail
 
 
+def test_a_secret_left_in_dotenv_after_storing_it_is_flagged(tmp_path, monkeypatch):
+    """The half-finished migration. `.env` wins, so nothing else would say so."""
+    monkeypatch.setattr("hermes_inbox.offline.has_credentials", lambda: True)
+    (tmp_path / ".env").write_text(f"IMAP_PASSWORD={APP_PASSWORD}\n", encoding="utf-8")
+    monkeypatch.setattr("hermes_inbox.secrets.available", lambda: (True, "fake"))
+    monkeypatch.setattr("hermes_inbox.secrets.get", lambda name: "stored-copy")
+
+    report = doctor.run(configured(tmp_path), login=False)
+    check = next(c for c in report.checks if "IMAP_PASSWORD" in c.name)
+
+    assert check.status == doctor.WARN
+    assert ".env" in check.fix
+    assert APP_PASSWORD not in report.render(), "the warning must not quote the value"
+
+
+def test_no_keychain_is_skipped_rather_than_failed(tmp_path, monkeypatch):
+    """Most installs will never have one. That is not a problem to report."""
+    monkeypatch.setattr("hermes_inbox.offline.has_credentials", lambda: True)
+    monkeypatch.setattr("hermes_inbox.secrets.available", lambda: (False, "not installed"))
+
+    report = doctor.run(configured(tmp_path), login=False)
+    assert status_of(report, "keychain") == doctor.SKIP
+    assert report.ready
+
+
+def test_secrets_check_names_the_source_of_each(tmp_path, monkeypatch):
+    monkeypatch.setattr("hermes_inbox.offline.has_credentials", lambda: True)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", SECRET)
+    monkeypatch.setattr("hermes_inbox.secrets.available", lambda: (False, "not installed"))
+
+    detail = next(
+        c.detail for c in doctor.run(configured(tmp_path), login=False).checks
+        if c.name == "secrets"
+    )
+    assert "ANTHROPIC_API_KEY ← environment" in detail
+    assert SECRET not in detail
+
+
 # --------------------------------------------------------------------------- #
 # the next-step advice
 # --------------------------------------------------------------------------- #

@@ -47,6 +47,7 @@ a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, se
 | `hermes-inbox backfill --concurrency 8` | Same, wider. Default 4; `1` is serial |
 | `hermes-inbox list` | Sorted list of decisions with summary and suggested action |
 | `hermes-inbox doctor` | Check the setup and print the single next thing to do |
+| `hermes-inbox secrets` | Where each secret is resolving from. Also `set`, `rm`, `import` |
 | `hermes-inbox stats` | What it has processed, by category and by gate rule |
 
 All of `demo`, `once` and `run` accept `--log-level DEBUG` and `--log-format json`.
@@ -147,10 +148,71 @@ Senders match as a full address (`a@b.com`) or a bare domain (`b.com`).
   API keys, and URL credentials are replaced with placeholders before any text
   is sent to the provider. Sender and subject are preserved deliberately —
   importance is mostly a function of who wrote to you.
+- **Secrets can live outside the filesystem.** Three values are secret — the
+  model key, the mailbox password, the bot token. `hermes-inbox secrets import`
+  moves them from `.env` into the OS keychain, and `hermes-inbox secrets`
+  reports where each one is resolving from without printing any of them. See
+  [Where secrets live](#where-secrets-live).
 - **Ticket text is data, not instructions.** The classifier prompt says so, and
   `fixtures/inbox.json` includes an adversarial message (uid 109) that tries to
   talk the agent into flagging itself as important. It scores 0.02 as spam, and
   a test asserts that.
+
+### Where secrets live
+
+Three values are secret: `ANTHROPIC_API_KEY`, `IMAP_PASSWORD` and
+`TELEGRAM_BOT_TOKEN`. Everything else in the config is a hostname, a threshold,
+or a preference.
+
+By default they sit in plaintext in `.env`, which is defensible on a laptop you
+alone use and poor anywhere else — `.env` survives into backups, syncs to cloud
+folders, and is readable by anything running as you. Install the extra and move
+them into the OS keychain instead:
+
+```bash
+pip install 'hermes-inbox[keyring]'
+hermes-inbox secrets import      # reads .env, stores each in the keychain
+hermes-inbox secrets             # shows where each one now resolves from
+```
+
+Resolution order, highest first:
+
+| | Source | Used for |
+|---|---|---|
+| 1 | environment variable | containers, systemd `Environment=`, one-off overrides |
+| 2 | `.env` | the default; a laptop you control |
+| 3 | OS keychain | Keychain, Credential Manager, or Secret Service |
+
+**The keychain is last on purpose.** An existing `.env` install keeps behaving
+exactly as it did; the keychain is consulted only for values nothing else
+supplied, so a machine that does not use it pays no DBus round-trip and is never
+prompted to unlock anything; and a half-finished migration keeps working from
+`.env` rather than silently reading a stale stored copy.
+
+The cost of that order is that a value left in `.env` shadows the keychain one.
+`import` does not edit `.env` — a tool that rewrites the file holding your
+credentials can only ever lose them — so it prints the lines to delete, and
+`doctor` keeps warning until they are gone:
+
+```
+  ! IMAP_PASSWORD    in the keychain, but .env wins
+                       → remove IMAP_PASSWORD from .env to use the stored one
+```
+
+There is no keychain on a headless server, which is where this most often runs.
+That is why `keyring` is an optional extra and why every path degrades to `.env`
+rather than failing: a locked, broken, or absent keychain must not stop the
+agent from starting. `HERMES_KEYRING=off` skips it entirely. For a systemd unit,
+prefer an environment variable from a root-owned file over either:
+
+```ini
+[Service]
+EnvironmentFile=/etc/hermes-inbox.env    # chmod 600, root-owned
+```
+
+`hermes-inbox secrets set <NAME>` prompts for the value rather than taking it as
+an argument — a command-line argument would land in shell history and in anyone
+else's `ps` output.
 
 ## Choosing a provider
 

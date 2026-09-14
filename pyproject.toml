@@ -14,6 +14,9 @@ dependencies = ["anthropic>=1.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# Optional on purpose: there is no keychain on a headless server, which is where
+# this most often runs, so the agent must work without it.
+keyring = ["keyring>=25"]
 
 [project.scripts]
 hermes-inbox = "hermes_inbox.cli:main"

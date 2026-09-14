@@ -1,7 +1,9 @@
 """Configuration, resolved from the environment.
 
-A `.env` file in the working directory is loaded if present. Nothing here has a
-secret as a default, and nothing is written back.
+A `.env` file in the working directory is loaded if present, then the OS
+keychain fills in any secret neither the environment nor `.env` supplied — see
+`secrets.py` for why the keychain is consulted last. Nothing here has a secret
+as a default, and nothing is written back.
 """
 
 from __future__ import annotations
@@ -117,6 +119,12 @@ class Config:
     @classmethod
     def from_env(cls) -> "Config":
         load_dotenv()
+        # Only for what is still missing, and only if a keychain exists. Placed
+        # after `.env` so an existing install behaves identically and an
+        # unlock prompt never appears for a machine that does not use it.
+        from .secrets import load_into_env
+
+        load_into_env()
         return cls(
             provider=os.environ.get("HERMES_PROVIDER", "auto"),
             model=os.environ.get("HERMES_MODEL", DEFAULT_MODEL),
