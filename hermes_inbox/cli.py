@@ -264,17 +264,75 @@ def cmd_feedback(args) -> int:
 
 
 def cmd_eval(args) -> int:
-    from .evals import run_eval
+    """Replay labeled examples; optionally compare providers and gate on recall."""
+    import json
+
+    from . import evals, providers
 
     config = Config.from_env()
     if args.threshold is not None:
         config.gate.threshold = args.threshold
-    from . import providers
 
-    classify_fn, name = _resolve_provider(args, config)
-    store = FeedbackStore(config.ensure_data_dir() / "feedback.jsonl")
-    print(f"scoring against {providers.describe(name, config)}\n")
-    print(run_eval(store, config, classify_fn=classify_fn).render())
+    if args.golden:
+        cases = evals.golden_cases()
+        corpus = f"golden set ({len(cases)} fixtures)"
+    else:
+        cases = evals.cases_from_store(FeedbackStore(config.ensure_data_dir() / "feedback.jsonl"))
+        corpus = f"your corrections ({len(cases)})"
+
+    if args.compare:
+        requested = list(dict.fromkeys(n.strip() for n in args.compare.split(",") if n.strip()))
+        unknown = [n for n in requested if n not in PROVIDERS or n == "auto"]
+        if unknown or len(requested) < 2:
+            print(
+                f"! --compare takes two or more of: {', '.join(p for p in PROVIDERS if p != 'auto')}",
+                file=sys.stderr,
+            )
+            return 2
+    else:
+        requested = [getattr(args, "provider", None) or config.provider]
+
+    concurrency = args.concurrency if args.concurrency is not None else config.concurrency
+    reports: dict[str, evals.Report] = {}
+    for requested_name in requested:
+        classify_fn, name = (
+            _resolve_provider(args, config)
+            if not args.compare
+            else providers.resolve(requested_name)
+        )
+        if not args.json:
+            print(f"scoring {corpus} against {providers.describe(name, config)}", file=sys.stderr)
+        try:
+            reports[name] = evals.replay(
+                cases,
+                config,
+                classify_fn=classify_fn,
+                concurrency=concurrency,
+                target_recall=args.target_recall,
+            )
+        except Exception as exc:
+            print(f"! {name} failed: {exc}", file=sys.stderr)
+            return 1
+
+    if args.json:
+        print(json.dumps({n: r.to_dict() for n, r in reports.items()}, indent=2))
+    elif args.compare:
+        print()
+        print(evals.compare(reports))
+    else:
+        print()
+        print(next(iter(reports.values())).render(verbose=args.verbose))
+
+    # A regression gate: the point estimate, since that is what a change moves.
+    if args.min_recall is not None:
+        if not cases:
+            print("! --min-recall with nothing to score — a gate must not pass on no data", file=sys.stderr)
+            return 1
+        failing = {n: r.recall for n, r in reports.items() if r.recall < args.min_recall}
+        for name, recall in failing.items():
+            print(f"! {name}: recall {recall:.1%} is below --min-recall {args.min_recall:.1%}", file=sys.stderr)
+        if failing:
+            return 1
     return 0
 
 
@@ -432,7 +490,20 @@ def main(argv: list[str] | None = None) -> int:
 
     ev = sub.add_parser("eval", help="replay your corrections and score the classifier")
     ev.add_argument("--threshold", type=float)
-    ev.add_argument("--provider", choices=PROVIDERS, help="compare providers on the same corrections")
+    ev.add_argument("--provider", choices=PROVIDERS, help="classifier to score")
+    ev.add_argument(
+        "--compare", metavar="A,B,...", help="score several providers on the same cases, paired"
+    )
+    ev.add_argument(
+        "--golden", action="store_true", help="replay the labeled fixture set instead of your corrections"
+    )
+    ev.add_argument(
+        "--target-recall", type=float, default=0.95, help="recall the suggested threshold must reach"
+    )
+    ev.add_argument("--min-recall", type=float, help="exit 1 if recall is below this (for CI)")
+    ev.add_argument("--concurrency", type=int, help="parallel calls (default HERMES_CONCURRENCY)")
+    ev.add_argument("--json", action="store_true", help="machine-readable output")
+    ev.add_argument("-v", "--verbose", action="store_true", help="reliability table and threshold sweep")
     ev.set_defaults(func=cmd_eval)
 
     backfill = sub.add_parser("backfill", help="classify mail already received (does not notify)")

@@ -71,10 +71,13 @@ overfit, or drown each other out, so every stored correction is replayed with
 better" is unfalsifiable.
 
 ```bash
-make eval
+make eval      # your corrections
+make golden    # the labeled fixture set; CI fails if its recall drops
 ```
 
-Watch recall. A false positive is one unwanted interruption; a false negative is
+Every rate is reported with a 95% interval, because a score on a few dozen
+labels is an estimate: 4 out of 4 important mails caught is consistent with a
+classifier that misses half of them. Watch recall. A false positive is one unwanted interruption; a false negative is
 something important you never saw.
 
 ## Project docs
@@ -92,7 +95,7 @@ something important you never saw.
 
 ## Status
 
-Deployment 1 runs. 234 tests, no network or credentials required.
+Deployment 1 runs. 275 tests, no network or credentials required.
 
 Not yet done, and deliberately so: reply drafting, the NemoClaw sandbox, and
 validation against a real mailbox over a meaningful period. The open items are

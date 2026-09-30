@@ -188,14 +188,17 @@ def classify(message, examples=None, config=None, client=None) -> Verdict:
 **3. Test it** with a stubbed transport — see `tests/test_providers.py`. Stub
 the HTTP layer, never call a real endpoint in a test.
 
-**4. Measure it** against the others on real corrections:
+**4. Measure it** against the others, on the same cases:
 
 ```bash
-hermes-inbox eval --provider myprovider
+hermes-inbox eval --golden --compare offline,myprovider     # no labels needed
+hermes-inbox eval --compare anthropic,myprovider            # your corrections
 ```
 
-That number, not the vendor's benchmark, is what decides whether it is good
-enough for your mail.
+Both runs score the same examples in the same order, so the comparison ends
+with a paired McNemar test: it says whether the gap between two providers is
+a real difference or within noise. That number, not the vendor's benchmark, is
+what decides whether it is good enough for your mail.
 
 ---
 
@@ -310,13 +313,14 @@ hermes_inbox/
   doctor.py       preflight checks; reads only, never prints a secret
   gate.py         ordered deterministic rules
   feedback.py     labeled examples, the correction loop
-  evals.py        leave-one-out replay scoring
+  evals.py        leave-one-out replay: your corrections, or the golden set
+  metrics.py      Wilson intervals, calibration, threshold sweep, McNemar
   state.py        read cursor + append-only decision log
   cli.py          argparse entry point
   sources/        MailSource implementations (base, imap, fixtures)
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            234 tests, no network required
-fixtures/         offline mailbox incl. one adversarial message
+tests/            275 tests, no network required
+fixtures/         offline mailbox incl. one adversarial message; labels.json is its golden set
 ```

@@ -13,6 +13,14 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-015 · The eval reported point estimates that four examples cannot support
+**Why:** "recall 100%" on 4 important emails read as a result; its 95% interval is [51%, 100%].
+The replay also rebuilt messages from stored corrections without headers — so it scored a
+different input than the live loop saw — and re-read `feedback.jsonl` once per example.
+**✅ Fixed** — every rate carries a Wilson interval; the golden set replays full messages,
+headers included; the store is read once (tested). **Not fixable for past corrections:**
+their headers were never stored.
+
 ### F-014 · `doctor` reported keychain secrets as coming from the environment
 **Why:** `load_into_env` copies keychain values into `os.environ`, and `inspect` ran
 afterwards and saw its own injection — reporting "environment" for exactly the secrets
@@ -105,6 +113,20 @@ needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 ---
 
 ## Decisions
+
+### D-019 · The eval reports estimates with intervals, and a golden set gates CI
+**Why:** the harness was the thing that makes the correction loop falsifiable, and it was
+reporting bare percentages from a handful of labels. Now: Wilson intervals on every rate,
+Brier and ECE because the gate thresholds the score, the strictest threshold reaching a
+recall target, p50/p95 latency, and an exact McNemar test for `--compare`, since two
+providers scored on the same examples are paired samples.
+**Why Wilson, not bootstrap:** deterministic, closed-form, and sane at 0/n and n/n — which
+is exactly where a small personal label set lives. **Why exact McNemar:** the chi-squared
+form needs ~25 discordant pairs.
+**Golden set:** `fixtures/labels.json`, all 12 fixtures labeled with a reason. CI runs it
+with `--min-recall 1.0`, which closes PLAN Phase 4's "runs in CI, baseline recorded".
+**Rejected:** a threshold auto-tuner that rewrites `HERMES_THRESHOLD`. It would fit 4
+positives exactly; the report suggests and warns below 10 instead.
 
 ### D-012 · The product is the machinery, not either deployment
 **Why:** the repo said "customer support agent" and shipped an inbox agent. Measured the
@@ -239,7 +261,9 @@ swap-the-source claim rather than working around it.
 
 ### O-003 · Not validated against real mail
 Every accuracy claim is against 12 fixtures. Gates the next phase: strong recall → reply
-drafting; weak recall → per-sender memory first.
+drafting; weak recall → per-sender memory first. The instrument is now ready (D-019): what
+is missing is ~30 labels from a real mailbox. "Strong" should be read off the interval's
+lower bound, not the point estimate.
 
 ### O-002 · Phase 0 install not done
 All five ADR 0001 questions are now answered (2026-09-09 amendment), so what blocks Phase 0
