@@ -83,7 +83,7 @@ class Report:
         return outcome.score >= self.threshold
 
     def _count(self, predicted: bool, label: bool) -> int:
-        return sum(1 for o in self.outcomes if self._predicted(o) is predicted and o.label is label)
+        return sum(1 for o in self.outcomes if self._predicted(o) == predicted and bool(o.label) == label)
 
     @property
     def total(self) -> int:
@@ -108,14 +108,14 @@ class Report:
     @property
     def misses(self) -> list[tuple[str, str, bool, float]]:
         """(subject, sender, expected, score) for every wrong call, worst first."""
-        wrong = [o for o in self.outcomes if self._predicted(o) is not o.label]
+        wrong = [o for o in self.outcomes if self._predicted(o) != bool(o.label)]
         # Missed important mail first: that is the expensive error.
         wrong.sort(key=lambda o: (not o.label, -abs(o.score - self.threshold)))
         return [(o.subject, o.sender, o.label, o.score) for o in wrong]
 
     def correct(self) -> list[bool]:
         """Per-case correctness, in replay order — the input to a paired test."""
-        return [self._predicted(o) is o.label for o in self.outcomes]
+        return [self._predicted(o) == bool(o.label) for o in self.outcomes]
 
     # -- rates with intervals --------------------------------------------------
 

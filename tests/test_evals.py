@@ -258,7 +258,16 @@ def test_concurrent_replay_is_actually_concurrent():
         return Verdict(False, 0.0, "other", "r")
 
     evals.replay(cases, Config(), classify_fn=slow, concurrency=4)
-    assert peak[0] == 4
+    # Overlap happened, and never beyond the cap. Not `== 4`: on a loaded runner
+    # the first worker can finish before the fourth starts.
+    assert 2 <= peak[0] <= 4
+
+
+def test_integer_labels_count_the_same_as_booleans():
+    as_bool = evals.Report(threshold=0.5, outcomes=[evals.Outcome("1", "s", "a", True, 0.9, "o", 0.0)])
+    as_int = evals.Report(threshold=0.5, outcomes=[evals.Outcome("1", "s", "a", 1, 0.9, "o", 0.0)])
+    assert as_int.true_positive == as_bool.true_positive == 1
+    assert as_int.correct() == [True] and as_int.misses == []
 
 
 def test_a_failing_provider_stops_the_replay_without_draining_the_backlog():
