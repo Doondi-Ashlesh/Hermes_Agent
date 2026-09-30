@@ -276,7 +276,7 @@ flowchart TB
         n2["notify/telegram.py<br/><i>alerts + buttons</i>"]
         n3["notify/console.py"]
         f["feedback.py<br/><i>labeled examples</i>"]
-        e["evals.py<br/><i>leave-one-out</i>"]
+        e["evals.py + metrics.py<br/><i>leave-one-out, 95% intervals</i>"]
         n1 -.-> n2
         n1 -.-> n3
     end

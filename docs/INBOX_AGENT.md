@@ -42,7 +42,10 @@ a verification step — follow **[SETUP.md](SETUP.md)**. To change any of it, se
 | `hermes-inbox once` | One polling cycle against your real mailbox, then exit |
 | `hermes-inbox run` | Poll continuously |
 | `hermes-inbox feedback <uid> important\|not-important --note "..."` | Correct a call from the terminal |
-| `hermes-inbox eval` | Replay every correction and score the classifier |
+| `hermes-inbox eval` | Replay every correction and score the classifier, with 95% intervals |
+| `hermes-inbox eval --golden` | Same, against the 12 labeled fixtures — no corrections or credentials needed |
+| `hermes-inbox eval --compare anthropic,ollama` | Score providers on the same cases, with a paired significance test |
+| `hermes-inbox eval -v` | Adds the reliability table and the full threshold sweep. `--json` for machines |
 | `hermes-inbox backfill --days 30` | Classify mail already received. Does **not** notify |
 | `hermes-inbox backfill --concurrency 8` | Same, wider. Default 4; `1` is serial |
 | `hermes-inbox list` | Sorted list of decisions with summary and suggested action |
@@ -110,16 +113,61 @@ exact failure mode [PLAN.md](PLAN.md) flags for the skill library.
 
 `hermes-inbox eval` replays every stored correction back through the classifier
 with **that example excluded from the prompt** (leave-one-out — scoring an
-example while the answer sits in its own context measures nothing) and reports:
+example while the answer sits in its own context measures nothing) and reports.
+This is the real output of `hermes-inbox eval --golden --provider offline`:
 
 ```
-  accuracy    66.7%
-  precision  100.0%   (of the pings, how many you wanted)
-  recall      50.0%   (of what mattered, how much it caught)
+Replayed 12 labeled example(s) (4 important), leave-one-out, threshold 0.7.
+
+               value   95% interval     n
+  accuracy   100.0%  [75.8%, 100.0%]  12/12
+  precision  100.0%  [51.0%, 100.0%]  4/4   of the pings, how many you wanted
+  recall     100.0%  [51.0%, 100.0%]  4/4   of what mattered, how much it caught
+  f1         100.0%
+
+  hits 4  ·  correct silences 8  ·  false alarms 0  ·  missed 0
+
+  calibration  brier 0.039 · ece 0.156   (0 is perfect; brier 0.25 is a coin flip)
+  latency      p50 0ms · p95 0ms · 12 calls in 0.01s
+  threshold    0.8 is the strictest reaching recall ≥ 95% (precision 100%, 4 ping(s))
+               only 4 important example(s) — fitted to noise below 10; do not act on it yet
 ```
 
 Watch **recall**. A false positive is one unnecessary buzz; a false negative is
 an important email you never saw. They are not equally bad.
+
+**Read the interval, not the value.** A perfect score on 4 important emails is
+consistent with a classifier that catches only half of them — that is what the
+51% lower bound says. Intervals are Wilson score intervals, chosen because the
+textbook normal interval claims [100%, 100%] from four samples. The rest of the
+report:
+
+- **Calibration.** The gate thresholds the score, so the score has to mean what
+  it says. Brier is the mean squared error of the score as a probability; ECE
+  is how far "said 0.9" sits from "was important 90% of the time". `-v` prints
+  the reliability table behind it.
+- **Threshold.** The strictest threshold that still reaches `--target-recall`
+  (default 95%), derived from your labels instead of assumed. Below 10 important
+  examples it is flagged as noise; `-v` prints the whole sweep.
+- **Latency.** p50 and p95 per call. `--concurrency` parallelizes the replay the
+  way `backfill` does — no cursor moves, so it is safe here.
+
+### The golden set, and the CI gate
+
+`fixtures/labels.json` labels all 12 fixtures, each with a one-line reason; uid
+109, the injection attempt, is labeled not important. `eval --golden` replays it
+with no corrections and no credentials, so it runs in CI on every push:
+
+```bash
+hermes-inbox eval --golden --provider offline --min-recall 1.0
+```
+
+`--min-recall` fails the build if the point estimate drops. The recorded
+baseline for the offline rules is the output above: 4/4 caught, 0 false alarms.
+
+It is a regression check, not a measurement. Twelve messages cannot say how the
+agent does on your mail — only your own labels can
+([O-003](DECISIONS.md#o-003--not-validated-against-real-mail)).
 
 ## The policy gate
 
@@ -262,12 +310,16 @@ Do not take the table above on faith for *your* mail. Label ~30 messages, then
 score each provider against the same corrections:
 
 ```bash
-hermes-inbox eval --provider anthropic
-hermes-inbox eval --provider ollama
+hermes-inbox eval --compare anthropic,ollama
 ```
 
 Compare **recall**. That is what the harness is for: it turns "is the cheap model
 good enough" into a number instead of an argument.
+
+Both providers score the same examples, so the table ends with an exact McNemar
+test on the examples where they disagree. `p < 0.05` is a real difference;
+anything above it means the two are not distinguishable on this many labels
+yet — which, at 30 labels, is the usual answer when the gap is a few points.
 
 ## Do you need NemoClaw for this?
 
@@ -317,7 +369,7 @@ against data you have rather than data you don't:
 | 1 | Ticket ingestion, `Ticket` schema, redaction | `Message`, `sources/`, `redact.py` |
 | 2 | Seed skills, no auto-promotion | Corrections are proposals; you promote by labeling |
 | 3 | Policy gate as code | `gate.py`, with adversarial fixture |
-| 4 | Eval harness | `evals.py`, leave-one-out |
+| 4 | Eval harness | `evals.py`, leave-one-out, intervals; golden set gated in CI |
 | 5 | Shadow mode | Read-only by construction — there is no send path to gate |
 
 Phase 0 (NemoClaw) is deliberately **not** a prerequisite here; see above.

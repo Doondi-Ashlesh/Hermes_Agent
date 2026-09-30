@@ -95,6 +95,12 @@ jobs:
           hermes-inbox demo --provider offline
           hermes-inbox stats
 
+      # PLAN Phase 4: the harness runs in CI against a recorded baseline. The
+      # offline rules catch all 4 important fixtures; a change that drops one
+      # fails here rather than in someone's inbox.
+      - name: Golden-set recall gate
+        run: hermes-inbox eval --golden --provider offline --min-recall 1.0
+
       - name: Adversarial fixture must not be flagged
         run: |
           python - <<'EOF'

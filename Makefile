@@ -2,7 +2,7 @@
 VENV := .venv
 PY := $(VENV)/bin/python
 
-.PHONY: help install test demo check run once eval stats clean
+.PHONY: help install test demo check run once eval golden stats clean
 
 help:  ## Show this help
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[1m%-10s\033[0m %s\n", $$1, $$2}'
@@ -38,6 +38,9 @@ run: install  ## Poll continuously (ctrl-c to stop)
 
 eval: install  ## Replay your corrections and score the classifier
 	$(PY) -m hermes_inbox.cli eval
+
+golden: install  ## Score the classifier on the labeled fixtures (no credentials)
+	$(PY) -m hermes_inbox.cli eval --golden -v
 
 stats: install  ## Summarize what the agent has done so far
 	$(PY) -m hermes_inbox.cli stats

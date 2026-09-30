@@ -48,7 +48,7 @@ several phases against its own source:
 | 1 — Ingestion | Not started | ✅ `Message`, `sources/`, `redact.py` |
 | 2 — Seed skills | Not started | ✅ Corrections are proposals; you promote by labeling |
 | 3 — Policy gate | Not started | ✅ `gate.py`, adversarial fixture passing |
-| 4 — Eval harness | Not started | ✅ `evals.py`, leave-one-out |
+| 4 — Eval harness | Not started | ✅ `evals.py`, leave-one-out, 95% intervals; golden set gated in CI |
 | 5 — Shadow mode | Not started | ✅ Read-only by construction — no send path to gate |
 | 6 — Gated autosend | Not started | N/A — nothing to send |
 

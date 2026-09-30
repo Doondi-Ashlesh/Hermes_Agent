@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-234 passed in 0.86s
+274 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.
@@ -319,12 +319,16 @@ make eval
 ```
 
 ```
-Replayed 31 labeled example(s), leave-one-out.
+Replayed 31 labeled example(s) (11 important), leave-one-out, threshold 0.7.
 
-  accuracy    87.1%
-  precision   90.0%   (of the pings, how many you wanted)
-  recall      81.8%   (of what mattered, how much it caught)
+               value   95% interval     n
+  accuracy    87.1%  [71.1%, 94.9%]  27/31
+  precision   90.0%  [59.6%, 98.2%]  9/10   of the pings, how many you wanted
+  recall      81.8%  [52.3%, 94.9%]  9/11   of what mattered, how much it caught
 ```
+
+Read the interval, not just the value: with 11 important emails labeled, 81.8%
+recall means somewhere between about half and nearly all. Label more to narrow it.
 
 Watch **recall**. A false positive is one unwanted buzz; a false negative is an
 email you never saw.
@@ -332,11 +336,11 @@ email you never saw.
 Comparing providers on your own mail:
 
 ```bash
-.venv/bin/hermes-inbox eval --provider anthropic
-.venv/bin/hermes-inbox eval --provider ollama
+.venv/bin/hermes-inbox eval --compare anthropic,ollama
 ```
 
-Same corrections, same leave-one-out method — a directly comparable number.
+Same corrections, same leave-one-out method, scored side by side, with a paired
+test saying whether the difference is real or noise.
 
 ---
 

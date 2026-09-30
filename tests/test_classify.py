@@ -13,7 +13,7 @@ import pytest
 
 from hermes_inbox.classify import SCHEMA, build_system, build_user, classify
 from hermes_inbox.config import Config
-from hermes_inbox.evals import Report, run_eval
+from hermes_inbox.evals import Outcome, Report, run_eval
 from hermes_inbox.feedback import Example, FeedbackStore
 from hermes_inbox.schema import Message, Verdict
 
@@ -217,6 +217,11 @@ def test_empty_report_renders_guidance():
 
 @pytest.mark.parametrize("tp,fp,fn,precision,recall", [(3, 1, 1, 0.75, 0.75), (0, 0, 0, 0.0, 0.0)])
 def test_report_metrics(tp, fp, fn, precision, recall):
-    report = Report(total=tp + fp + fn, true_positive=tp, false_positive=fp, false_negative=fn)
+    def outcome(label: bool, score: float) -> Outcome:
+        return Outcome("u", "s", "a@x.example", label, score, "other", 0.0)
+
+    outcomes = [outcome(True, 1.0)] * tp + [outcome(False, 1.0)] * fp + [outcome(True, 0.0)] * fn
+    report = Report(threshold=0.5, outcomes=outcomes)
+    assert report.total == tp + fp + fn
     assert report.precision == pytest.approx(precision)
     assert report.recall == pytest.approx(recall)
