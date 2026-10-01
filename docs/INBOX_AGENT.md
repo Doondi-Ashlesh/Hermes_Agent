@@ -165,8 +165,10 @@ hermes-inbox eval --golden --provider offline --min-recall 1.0
 `--min-recall` fails the build if the point estimate drops. The recorded
 baseline for the offline rules is the output above: 4/4 caught, 0 false alarms.
 
-It is a regression check, not a measurement. Twelve messages cannot say how the
-agent does on your mail — only your own labels can
+It is a regression check, not a measurement. The offline rules were written with
+these same twelve messages in view, so 4/4 is expected and says nothing about
+quality — the gate exists to catch a change that breaks what used to work.
+Twelve messages cannot say how the agent does on your mail — only your own labels can
 ([O-003](DECISIONS.md#o-003--not-validated-against-real-mail)).
 
 ## The policy gate
@@ -264,17 +266,45 @@ else's `ps` output.
 
 ## Choosing a provider
 
-The classifier is a seam. Three implementations ship:
+The classifier is a seam. Four implementations ship:
 
 | `HERMES_PROVIDER` | Cost | Learns from corrections | Notes |
 |---|---|---|---|
 | `anthropic` *(default)* | ~$9–30/mo | yes | Best judgement and injection resistance |
 | `ollama` | free, local | yes, less reliably | Needs `ollama serve`; nothing leaves your machine |
+| `openai-compat` | your GPU | yes, model-dependent | Any `/v1/chat/completions` server — vLLM, an NVIDIA NIM container. Nothing leaves your hardware |
 | `offline` | free | **no** | Keyword rules. Demos and CI only |
 | `auto` | — | — | `anthropic` if a key is set, else `offline` |
 
 ```bash
 HERMES_PROVIDER=ollama HERMES_OLLAMA_MODEL=qwen2.5:7b hermes-inbox once
+```
+
+### Self-hosted on a GPU: `openai-compat`
+
+For a model served by vLLM or an NVIDIA NIM container — the serving stacks built
+for throughput, which is what `eval --concurrency` and `backfill --concurrency`
+are bound on:
+
+```bash
+vllm serve Qwen/Qwen2.5-7B-Instruct          # listens on :8000
+HERMES_PROVIDER=openai-compat hermes-inbox eval --golden --concurrency 8
+```
+
+- Output is constrained with `response_format: {"type": "json_schema"}`, the
+  request shape vLLM documents for structured outputs. A server that rejects it
+  fails with an error naming structured outputs, not a parse error.
+- `HERMES_OPENAI_MODEL` can stay empty: a vLLM or NIM server serves one model, and
+  it is read from `/v1/models` once per process.
+- `HERMES_OPENAI_API_KEY` is optional and sent only when set. It is **not**
+  keychain-backed yet ([O-004](DECISIONS.md#o-004--openai-compat-is-verified-against-vllm-not-nim)).
+- NIM is expected to work because it serves the same OpenAI-compatible API, but
+  that has not been verified against a running NIM container (O-004).
+
+Before switching, measure it against what you run now, on the same cases:
+
+```bash
+hermes-inbox eval --compare anthropic,openai-compat
 ```
 
 ### What it costs
@@ -348,7 +378,7 @@ the only real proof that a seam works:
 |---|---|---|
 | Mail source | `sources/base.py::MailSource` | `ImapSource`, `FixtureSource` |
 | Notifier | `notify/base.py::Notifier` | `TelegramNotifier`, `ConsoleNotifier` |
-| Classifier | `providers.py::resolve` | Anthropic, Ollama, offline heuristics |
+| Classifier | `providers.py::resolve` | Anthropic, Ollama, OpenAI-compatible (vLLM, NIM), offline heuristics |
 
 **WhatsApp instead of Telegram:** implement `send` and `poll_feedback` behind
 `Notifier` and nothing upstream changes. Telegram is first only because a bot

@@ -126,6 +126,28 @@ def test_ollama_down_is_reported_with_the_fix(tmp_path, monkeypatch):
     assert "ollama serve" in check.fix
 
 
+def test_openai_compat_probes_the_configured_endpoint(tmp_path, monkeypatch):
+    probed = []
+
+    def down(host, port, timeout=5.0):
+        probed.append((host, port))
+        return False, "ConnectionRefusedError"
+
+    monkeypatch.setattr(doctor, "_reachable", down)
+    config = configured(
+        tmp_path,
+        provider="openai-compat",
+        openai_base_url="http://gpu-box:8000/v1",
+        openai_api_key="nvapi-secretvalue987",
+    )
+    report = doctor.run(config, login=False)
+    check = next(c for c in report.checks if c.name == "model provider")
+    assert ("gpu-box", 8000) in probed
+    assert check.status == doctor.FAIL
+    assert "vllm serve" in check.fix
+    assert "nvapi-secretvalue987" not in report.render()
+
+
 def test_missing_notifier_is_a_warning_not_a_failure(tmp_path, monkeypatch):
     """Console output is a perfectly good fallback; it must not block a run."""
     monkeypatch.setattr("hermes_inbox.offline.has_credentials", lambda: True)

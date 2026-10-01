@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import json
 
-from .classify import SCHEMA, SYSTEM, build_system, build_user
+from .classify import SCHEMA, SYSTEM, build_user, coerce_verdict, system_text
 from .http import HttpError, post_json
 from .logs import get_logger
 from .redact import redact_message
@@ -36,11 +36,6 @@ log = get_logger(__name__)
 
 class OllamaError(RuntimeError):
     pass
-
-
-def _system_text(examples) -> str:
-    """Flatten the cacheable blocks into one string — Ollama has no cache API."""
-    return "\n\n".join(block["text"] for block in build_system(examples))
 
 
 def classify(message: Message, examples=None, config=None, client=None) -> Verdict:
@@ -56,7 +51,7 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
         "format": SCHEMA,
         "options": {"temperature": 0},
         "messages": [
-            {"role": "system", "content": _system_text(examples)},
+            {"role": "system", "content": system_text(examples)},
             {"role": "user", "content": build_user(safe)},
         ],
     }
@@ -85,15 +80,10 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
     except json.JSONDecodeError as exc:
         raise OllamaError(f"ollama did not return valid JSON: {content[:200]}") from exc
 
-    # Small models sometimes emit an out-of-range score or an unlisted category
-    # even under a schema; clamp rather than crash the polling loop.
-    data["score"] = max(0.0, min(1.0, float(data.get("score", 0.0))))
-    if data.get("category") not in SCHEMA["properties"]["category"]["enum"]:
-        data["category"] = "other"
-    data.setdefault("suggested_action", "")
-    data.setdefault("reason", "")
-    data["important"] = bool(data.get("important", data["score"] >= 0.5))
-    return Verdict.from_dict(data)
+    try:
+        return coerce_verdict(data)
+    except ValueError as exc:
+        raise OllamaError(f"ollama returned an unusable verdict: {exc}") from exc
 
 
 __all__ = ["classify", "OllamaError", "SYSTEM"]

@@ -1,14 +1,15 @@
 """Provider registry.
 
 The classifier is a seam: anything with the signature
-`(message, examples, config, client=None) -> Verdict` can serve. Three
+`(message, examples, config, client=None) -> Verdict` can serve. Four
 implementations ship, which is what proves the seam actually works.
 
-| name        | cost           | learns from corrections | notes                       |
-|-------------|----------------|-------------------------|-----------------------------|
-| `anthropic` | ~$9-30/month   | yes                     | default; best judgement     |
-| `ollama`    | free, local    | yes, less reliably      | needs `ollama serve`        |
-| `offline`   | free           | no                      | keyword rules; demos and CI |
+| name            | cost           | learns from corrections | notes                         |
+|-----------------|----------------|-------------------------|-------------------------------|
+| `anthropic`     | ~$9-30/month   | yes                     | default; best judgement       |
+| `ollama`        | free, local    | yes, less reliably      | needs `ollama serve`          |
+| `openai-compat` | your GPU       | yes, model-dependent    | vLLM, NIM; any `/v1` server   |
+| `offline`       | free           | no                      | keyword rules; demos and CI   |
 
 `auto` picks `anthropic` when a credential is resolvable, otherwise `offline`,
 so a fresh clone runs with no configuration at all.
@@ -16,7 +17,7 @@ so a fresh clone runs with no configuration at all.
 
 from __future__ import annotations
 
-NAMES = ("auto", "anthropic", "ollama", "offline")
+NAMES = ("auto", "anthropic", "ollama", "openai-compat", "offline")
 
 
 def resolve(name: str = "auto") -> tuple[object, str]:
@@ -40,6 +41,10 @@ def resolve(name: str = "auto") -> tuple[object, str]:
         from .ollama import classify as ollama_classify
 
         return ollama_classify, "ollama"
+    if name == "openai-compat":
+        from .openai_compat import classify as openai_classify
+
+        return openai_classify, "openai-compat"
 
     from .offline import classify as offline_classify
 
@@ -52,4 +57,7 @@ def describe(name: str, config) -> str:
         return f"anthropic · {config.model}"
     if name == "ollama":
         return f"ollama · {config.ollama_model} · {config.ollama_host}"
+    if name == "openai-compat":
+        model = config.openai_model or "served model"
+        return f"openai-compat · {model} · {config.openai_base_url}"
     return "offline keyword rules (does not learn from corrections)"

@@ -73,6 +73,37 @@ SCHEMA = {
 }
 
 
+def coerce_verdict(data: dict) -> Verdict:
+    """Validate a verdict from a model that may not honour the schema exactly.
+
+    Constrained decoding makes the *shape* reliable, not the values: small
+    models still emit an out-of-range score or an unlisted category, and those
+    are clamped — the intent is still readable.
+
+    A score that is missing, not a number, or not finite is different: there is
+    no judgement to clamp. Defaulting it to 0 would silently suppress what might
+    be an important message and advance the cursor past it, so it raises, and
+    the loop stops and retries loudly (F-004).
+    """
+    import math
+
+    data = dict(data)
+    raw = data.get("score")
+    try:
+        score = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"verdict has no usable score: {raw!r}") from None
+    if not math.isfinite(score):
+        raise ValueError(f"verdict has no usable score: {raw!r}")
+    data["score"] = max(0.0, min(1.0, score))
+    if data.get("category") not in CATEGORIES:
+        data["category"] = "other"
+    data.setdefault("suggested_action", "")
+    data.setdefault("reason", "")
+    data["important"] = bool(data.get("important", data["score"] >= 0.5))
+    return Verdict.from_dict(data)
+
+
 def build_system(examples: Sequence[Example], ttl: str = "1h") -> list[dict]:
     """The cacheable prefix: standing rules, then your corrections.
 
@@ -92,6 +123,11 @@ def build_system(examples: Sequence[Example], ttl: str = "1h") -> list[dict]:
         )
     blocks[-1]["cache_control"] = {"type": "ephemeral", "ttl": ttl}
     return blocks
+
+
+def system_text(examples: Sequence[Example]) -> str:
+    """The same prefix as one string, for providers with no cache API."""
+    return "\n\n".join(block["text"] for block in build_system(examples))
 
 
 def build_user(message: Message) -> str:

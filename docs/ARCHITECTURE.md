@@ -261,10 +261,12 @@ flowchart TB
         p2["classify.py<br/><i>anthropic</i>"]
         p3["ollama.py<br/><i>local</i>"]
         p4["offline.py<br/><i>keyword rules</i>"]
+        p5["openai_compat.py<br/><i>vLLM, NIM</i>"]
         r --> p1
         p1 -.-> p2
         p1 -.-> p3
         p1 -.-> p4
+        p1 -.-> p5
     end
 
     subgraph decide["Policy"]

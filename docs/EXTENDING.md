@@ -154,7 +154,7 @@ class WhatsAppNotifier:
 
 ## Recipe: a new classifier provider
 
-The signature is the contract — all three implementations match it exactly, and
+The signature is the contract — all four implementations match it exactly, and
 a test asserts that.
 
 ```python
@@ -164,22 +164,19 @@ def classify(message, examples=None, config=None, client=None) -> Verdict:
 **1. Write it** — `hermes_inbox/myprovider.py`:
 
 ```python
-from .classify import SCHEMA, build_system, build_user
+from .classify import SCHEMA, build_user, coerce_verdict, system_text
 from .redact import redact_message
 from .schema import Verdict
 
 
 def classify(message, examples=None, config=None, client=None) -> Verdict:
     safe = redact_message(message)                      # never skip
-    system = "\n\n".join(b["text"] for b in build_system(examples or []))
-    raw = my_api(system=system, user=build_user(safe), schema=SCHEMA)
+    raw = my_api(system=system_text(examples or []), user=build_user(safe), schema=SCHEMA)
 
-    # Clamp. Weak models return out-of-range scores and invented categories
-    # even under a schema, and must not be able to crash the polling loop.
-    raw["score"] = max(0.0, min(1.0, float(raw.get("score", 0.0))))
-    if raw.get("category") not in SCHEMA["properties"]["category"]["enum"]:
-        raw["category"] = "other"
-    return Verdict.from_dict(raw)
+    # Weak models return out-of-range scores and invented categories even
+    # under a schema; coerce_verdict clamps those. A missing or non-numeric
+    # score raises instead: no score is not a low score (F-004).
+    return coerce_verdict(raw)
 ```
 
 **2. Register it** — add the name to `providers.py::NAMES`, a branch in
@@ -306,6 +303,7 @@ hermes_inbox/
   redact.py       secret-stripping, single path, runs before every model call
   classify.py     Anthropic provider + the shared prompt builders
   ollama.py       local provider
+  openai_compat.py  any /v1/chat/completions server: vLLM, NIM
   offline.py      keyword rules; no model, used by demo and CI
   providers.py    registry: name → classify_fn
   http.py         JSON-over-HTTP with retries for the non-SDK providers
@@ -321,6 +319,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            275 tests, no network required
+tests/            297 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message; labels.json is its golden set
 ```
