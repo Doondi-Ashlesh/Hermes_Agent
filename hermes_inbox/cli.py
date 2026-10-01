@@ -303,6 +303,10 @@ def cmd_eval(args) -> int:
         if not args.json:
             print(f"scoring {corpus} against {providers.describe(name, config)}", file=sys.stderr)
         try:
+            if name == "openai-compat":
+                from .openai_compat import resolve_model
+
+                resolve_model(config)  # once, before fanning out, so a dead server fails once
             reports[name] = evals.replay(
                 cases,
                 config,

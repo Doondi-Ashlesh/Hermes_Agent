@@ -69,13 +69,53 @@ def post_json(
     `retries` is the number of *additional* attempts, so retries=3 means up to
     four requests. Raises `HttpError` when they are all exhausted.
     """
-    request_headers = {"Content-Type": "application/json", **(headers or {})}
-    body = json.dumps(payload).encode("utf-8")
+    return _request_json(
+        url,
+        json.dumps(payload).encode("utf-8"),
+        timeout=timeout,
+        retries=retries,
+        backoff=backoff,
+        max_backoff=max_backoff,
+        headers={"Content-Type": "application/json", **(headers or {})},
+    )
+
+
+def get_json(
+    url: str,
+    *,
+    timeout: float = 30,
+    retries: int = 3,
+    backoff: float = 0.5,
+    max_backoff: float = 30.0,
+    headers: dict[str, str] | None = None,
+) -> dict:
+    """GET and parse JSON, under the same retry policy as `post_json`."""
+    return _request_json(
+        url,
+        None,
+        timeout=timeout,
+        retries=retries,
+        backoff=backoff,
+        max_backoff=max_backoff,
+        headers=dict(headers or {}),
+    )
+
+
+def _request_json(
+    url: str,
+    body: bytes | None,
+    *,
+    timeout: float,
+    retries: int,
+    backoff: float,
+    max_backoff: float,
+    headers: dict[str, str],
+) -> dict:
     last: HttpError | None = None
 
     for attempt in range(retries + 1):
         try:
-            request = urllib.request.Request(url, data=body, headers=request_headers)
+            request = urllib.request.Request(url, data=body, headers=headers)
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
 

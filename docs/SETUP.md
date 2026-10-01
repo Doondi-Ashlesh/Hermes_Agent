@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-275 passed in 0.86s
+297 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.
@@ -125,6 +125,16 @@ HERMES_OLLAMA_MODEL=qwen2.5:7b
 
 Nothing leaves your machine. It follows corrections less reliably — measure it
 with `make eval` rather than guessing (Step 6).
+
+**Self-hosted on a GPU.** Any OpenAI-compatible server, such as vLLM or an NVIDIA
+NIM container:
+
+```bash
+HERMES_PROVIDER=openai-compat
+HERMES_OPENAI_BASE_URL=http://localhost:8000/v1
+```
+
+Leave `HERMES_OPENAI_MODEL` empty to use whatever the server is serving.
 
 **Verify:**
 

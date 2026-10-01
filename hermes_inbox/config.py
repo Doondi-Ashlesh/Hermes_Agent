@@ -14,6 +14,7 @@ from pathlib import Path
 
 DEFAULT_MODEL = "claude-sonnet-5"
 DEFAULT_OLLAMA_MODEL = "qwen2.5:7b"
+DEFAULT_OPENAI_BASE_URL = "http://localhost:8000/v1"  # vllm serve's default port
 DEFAULT_INTERVAL = 60
 DEFAULT_THRESHOLD = 0.7
 
@@ -105,6 +106,11 @@ class Config:
     ollama_model: str = DEFAULT_OLLAMA_MODEL
     ollama_timeout: int = 120
 
+    openai_base_url: str = DEFAULT_OPENAI_BASE_URL
+    openai_model: str = ""  # empty = ask the server what it serves
+    openai_api_key: str = ""
+    openai_timeout: int = 120
+
     imap_host: str = ""
     imap_port: int = 993
     imap_user: str = ""
@@ -138,6 +144,10 @@ class Config:
             ollama_host=os.environ.get("HERMES_OLLAMA_HOST", "http://localhost:11434"),
             ollama_model=os.environ.get("HERMES_OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
             ollama_timeout=_int("HERMES_OLLAMA_TIMEOUT", 120),
+            openai_base_url=os.environ.get("HERMES_OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL),
+            openai_model=os.environ.get("HERMES_OPENAI_MODEL", ""),
+            openai_api_key=os.environ.get("HERMES_OPENAI_API_KEY", ""),
+            openai_timeout=_int("HERMES_OPENAI_TIMEOUT", 120),
             interval=_int("HERMES_INTERVAL", DEFAULT_INTERVAL),
             data_dir=Path(os.environ.get("HERMES_DATA_DIR", "data")),
             max_examples=_int("HERMES_MAX_EXAMPLES", 40),

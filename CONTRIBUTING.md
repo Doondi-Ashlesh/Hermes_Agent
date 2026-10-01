@@ -68,7 +68,7 @@ being added, in kebab-case. The layers are the ones in
 | Layer | Covers | Example branch |
 |---|---|---|
 | `ingestion` | `sources/`, `schema.py`, `redact.py` | `ingestion/zammad-source` |
-| `judgement` | `classify.py`, `providers.py`, `ollama.py`, `offline.py` | `judgement/per-sender-memory` |
+| `judgement` | `classify.py`, `providers.py`, `ollama.py`, `openai_compat.py`, `offline.py` | `judgement/per-sender-memory` |
 | `policy` | `gate.py` | `policy/sentiment-trigger` |
 | `delivery` | `notify/` | `delivery/whatsapp-notifier` |
 | `learning` | `feedback.py`, `evals.py`, `metrics.py` | `learning/correction-pruning` |
@@ -114,7 +114,7 @@ tracked-file half; the branch-naming table above covers the other.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            275 tests, no network required
+tests/            297 tests, no network required
 fixtures/         offline mailbox, including one adversarial message, and its golden labels
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```

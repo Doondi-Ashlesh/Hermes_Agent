@@ -95,7 +95,7 @@ something important you never saw.
 
 ## Status
 
-Deployment 1 runs. 275 tests, no network or credentials required.
+Deployment 1 runs. 297 tests, no network or credentials required.
 
 Not yet done, and deliberately so: reply drafting, the NemoClaw sandbox, and
 validation against a real mailbox over a meaningful period. The open items are

@@ -13,6 +13,14 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-016 · PR #12 shipped from a branch that broke the naming rule
+**Why:** the work started on a session-assigned branch (`claude/…`), which is neither
+`<layer>/<what-is-new>` nor free of tool names (CONTRIBUTING §4, §5). Not caught before the
+PR was opened; the owner caught it after merge.
+**Partly fixed** — the merged commit is also on `learning/eval-intervals`; the old branch
+needs deleting by hand (the push to delete was refused here). `main`'s merge message keeps
+the old name: rewriting `main` to fix a label is not worth it. Branch is now chosen first.
+
 ### F-015 · The eval reported point estimates that four examples cannot support
 **Why:** "recall 100%" on 4 important emails read as a result; its 95% interval is [51%, 100%].
 The replay also rebuilt messages from stored corrections without headers — so it scored a
@@ -114,6 +122,21 @@ needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 
 ## Decisions
 
+### D-020 · A fourth provider for any OpenAI-compatible server
+**Why:** vLLM and NVIDIA NIM both serve `/v1/chat/completions`, and they are where a
+self-hosted model actually runs at throughput — Ollama is the laptop path, not the GPU one.
+One adapter covers both, keeps mail on hardware you control, and gives `eval --compare` a
+second local contender.
+**Shape:** constrained to the schema via `response_format` json_schema; output still goes
+through `coerce_verdict` (shared with Ollama now) because constrained decoding fixes the
+shape, not the values. Out-of-range values are clamped; a missing, non-numeric or NaN score
+**raises**. Ollama used to raise on a non-numeric score only by accident, and defaulted a
+missing one to 0 — which would mark a message unimportant and advance the cursor past it. The served model is discovered from `/v1/models` under a lock, and
+`eval` resolves it before fanning out so a dead server fails once, not once per worker.
+**Rejected:** the `openai` SDK — a dependency for one POST, and `http.py` already carries
+the retry policy (F-013). Naming it `nim` — the transport is generic, and NIM is unverified
+(O-004).
+
 ### D-019 · The eval reports estimates with intervals, and a golden set gates CI
 **Why:** the harness was the thing that makes the correction loop falsifiable, and it was
 reporting bare percentages from a handful of labels. Now: Wilson intervals on every rate,
@@ -124,7 +147,9 @@ providers scored on the same examples are paired samples.
 is exactly where a small personal label set lives. **Why exact McNemar:** the chi-squared
 form needs ~25 discordant pairs.
 **Golden set:** `fixtures/labels.json`, all 12 fixtures labeled with a reason. CI runs it
-with `--min-recall 1.0`, which closes PLAN Phase 4's "runs in CI, baseline recorded".
+with `--min-recall 1.0`, which closes PLAN Phase 4's "runs in CI, baseline recorded" for
+Track A. The offline rules were written against these fixtures, so the gate is a regression
+tripwire, not evidence of quality.
 **Rejected:** a threshold auto-tuner that rewrites `HERMES_THRESHOLD`. It would fit 4
 positives exactly; the report suggests and warns below 10 instead.
 
@@ -258,6 +283,13 @@ swap-the-source claim rather than working around it.
 ---
 
 ## Open
+
+### O-004 · `openai-compat` is verified against vLLM, not NIM
+The request shape follows vLLM's structured-outputs docs; NVIDIA's docs were unreachable
+from the build environment, so NIM support for `response_format` json_schema is expected,
+not confirmed. Closing it takes one `eval --golden` against a running NIM container.
+`HERMES_OPENAI_API_KEY` is also not keychain-backed: adding a fourth secret touches every
+doc that says "three", and local servers usually need no key.
 
 ### O-003 · Not validated against real mail
 Every accuracy claim is against 12 fixtures. Gates the next phase: strong recall → reply
