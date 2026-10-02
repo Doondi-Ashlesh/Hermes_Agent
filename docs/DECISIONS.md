@@ -13,6 +13,14 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-017 · Relabeling a message kept both answers
+**Why:** the store is append-only and every reader took every line, so correcting the same
+message twice put it in the prompt with both labels, counted it twice, and scored it twice
+in `eval` against opposite answers. Found reviewing PR #12.
+**✅ Fixed** — `FeedbackStore.current()` keeps the latest label per message, in order of
+when it was decided; the prompt, counts and eval read that. `all()` keeps the full
+history, and nothing in the file is rewritten. Tests reproduce the bug first.
+
 ### F-016 · PR #12 shipped from a branch that broke the naming rule
 **Why:** the work started on a session-assigned branch (`claude/…`), which is neither
 `<layer>/<what-is-new>` nor free of tool names (CONTRIBUTING §4, §5). Not caught before the
@@ -305,4 +313,5 @@ Either is covered by that channel's egress preset, so confirm it during the inst
 
 ### O-001 · Corrections grow unboundedly
 `HERMES_MAX_EXAMPLES` caps what reaches the prompt; no pruning or conflict detection.
-Contradictory corrections would fight silently — only the eval score would show it.
+Contradictory corrections across *different* messages would still fight silently — only
+the eval score would show it. Two labels on the *same* message no longer can (F-017).

@@ -114,7 +114,7 @@ tracked-file half; the branch-naming table above covers the other.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            297 tests, no network required
+tests/            303 tests, no network required
 fixtures/         offline mailbox, including one adversarial message, and its golden labels
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```
