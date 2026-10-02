@@ -59,7 +59,13 @@ class Example:
 
 
 class FeedbackStore:
-    """Append-only JSONL of labeled examples, newest last."""
+    """Append-only JSONL of labeled examples, newest last.
+
+    Correcting the same message twice appends a second line rather than editing
+    the first: the file is the history of every button press. What the agent
+    *uses* is `current()` — one label per message, the latest — so changing
+    your mind replaces the old answer instead of arguing with it in the prompt.
+    """
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -83,17 +89,30 @@ class FeedbackStore:
                 continue  # tolerate a partially written trailing line
         return examples
 
+    def current(self) -> list[Example]:
+        """The latest label for each message, ordered by when it was decided.
+
+        A relabel moves the message to the newest position, so it is what
+        survives `HERMES_MAX_EXAMPLES` — it is the most recent judgement you made.
+        """
+        latest: dict[str, Example] = {}
+        for example in self.all():
+            latest.pop(example.uid, None)  # re-insert so dict order is recency
+            latest[example.uid] = example
+        return list(latest.values())
+
     def recent(self, limit: int, exclude_uid: str | None = None) -> list[Example]:
-        """The newest `limit` examples, optionally omitting one.
+        """The newest `limit` current labels, optionally omitting one message.
 
         `exclude_uid` exists for leave-one-out evaluation: scoring an example
         while it sits in the prompt measures nothing.
         """
-        examples = [e for e in self.all() if e.uid != exclude_uid]
+        examples = [e for e in self.current() if e.uid != exclude_uid]
         return examples[-limit:] if limit > 0 else examples
 
     def counts(self) -> tuple[int, int]:
-        examples = self.all()
+        """(important, not important), one per message however often it was relabeled."""
+        examples = self.current()
         important = sum(1 for e in examples if e.label)
         return important, len(examples) - important
 

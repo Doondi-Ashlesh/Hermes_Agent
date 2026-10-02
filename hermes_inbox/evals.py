@@ -273,7 +273,10 @@ class Report:
 
 
 def cases_from_store(store: FeedbackStore) -> list[Case]:
-    """Your corrections, rebuilt as messages. Headers were never stored, so none are replayed."""
+    """Your corrections, rebuilt as messages — the latest label for each, once.
+
+    Headers were never stored, so none are replayed.
+    """
     now = datetime.now(timezone.utc)
     return [
         Case(
@@ -287,7 +290,7 @@ def cases_from_store(store: FeedbackStore) -> list[Case]:
             ),
             example=e,
         )
-        for e in store.all()
+        for e in store.current()
     ]
 
 

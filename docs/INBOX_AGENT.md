@@ -71,6 +71,11 @@ There is no fine-tuning and no weight update. What happens is:
    into the prompt above the message being judged, with a note that they
    outrank the general guidance.
 
+Correcting the same message again replaces your earlier answer: the prompt, the
+counts and `eval` use only the latest label per message, and a relabel counts as
+your newest correction. The file keeps every press, so the change of mind stays
+on record.
+
 So it stops making a mistake because you told it not to, and the telling
 persists. That is a real feedback loop, and it is also the whole of it.
 
