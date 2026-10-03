@@ -13,7 +13,7 @@ worse.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -32,6 +32,10 @@ class Example:
     label: bool  # True = should have notified me
     note: str = ""
     labeled_at: str = ""
+    # The few headers the source keeps (bulk/automated markers). Stored so the
+    # eval replays the message the live loop actually scored; not rendered into
+    # the prompt. Absent on corrections written before this field existed.
+    headers: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_message(cls, message: Message, label: bool, note: str = "") -> "Example":
@@ -43,6 +47,7 @@ class Example:
             label=label,
             note=note,
             labeled_at=datetime.now(timezone.utc).isoformat(),
+            headers=dict(message.headers),
         )
 
     def render(self) -> str:
@@ -56,6 +61,9 @@ class Example:
         if self.note:
             lines.append(f"Why: {self.note}")
         return "\n".join(lines)
+
+
+_FIELDS = frozenset(f.name for f in fields(Example))
 
 
 class FeedbackStore:
@@ -84,8 +92,11 @@ class FeedbackStore:
             if not line:
                 continue
             try:
-                examples.append(Example(**json.loads(line)))
-            except (json.JSONDecodeError, TypeError):
+                data = json.loads(line)
+                # Ignore fields this version does not know, so a correction
+                # written by a newer version is read rather than dropped.
+                examples.append(Example(**{k: v for k, v in data.items() if k in _FIELDS}))
+            except (json.JSONDecodeError, TypeError, AttributeError):
                 continue  # tolerate a partially written trailing line
         return examples
 

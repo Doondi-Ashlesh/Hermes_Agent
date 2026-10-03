@@ -272,12 +272,22 @@ class Report:
 # --------------------------------------------------------------------------- #
 
 
-def cases_from_store(store: FeedbackStore) -> list[Case]:
+def cases_from_store(store: FeedbackStore, decisions=None) -> list[Case]:
     """Your corrections, rebuilt as messages — the latest label for each, once.
 
-    Headers were never stored, so none are replayed.
+    Headers come from the correction itself. Corrections made before headers
+    were stored (F-015) have none; for those, `decisions` (the `DecisionLog`)
+    supplies the headers of the message as it was classified, when it is
+    still there. Without either, the message replays with no headers.
     """
     now = datetime.now(timezone.utc)
+
+    def headers_for(example: Example) -> dict[str, str]:
+        if example.headers or decisions is None:
+            return dict(example.headers)
+        decision = decisions.find(example.uid)
+        return dict(decision.message.headers) if decision is not None else {}
+
     return [
         Case(
             message=Message(
@@ -287,6 +297,7 @@ def cases_from_store(store: FeedbackStore) -> list[Case]:
                 subject=e.subject,
                 body=e.snippet,
                 received_at=now,
+                headers=headers_for(e),
             ),
             example=e,
         )
@@ -398,10 +409,11 @@ def run_eval(
     client=None,
     concurrency: int = 1,
     target_recall: float = 0.95,
+    decisions=None,
 ) -> Report:
     """Score the classifier against every stored correction."""
     return replay(
-        cases_from_store(store),
+        cases_from_store(store, decisions),
         config,
         classify_fn=classify_fn,
         client=client,

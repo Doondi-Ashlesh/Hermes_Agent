@@ -34,8 +34,11 @@ the old name: rewriting `main` to fix a label is not worth it. Branch is now cho
 The replay also rebuilt messages from stored corrections without headers — so it scored a
 different input than the live loop saw — and re-read `feedback.jsonl` once per example.
 **✅ Fixed** — every rate carries a Wilson interval; the golden set replays full messages,
-headers included; the store is read once (tested). **Not fixable for past corrections:**
-their headers were never stored.
+headers included; the store is read once (tested). Corrections now store the source's
+headers, and replay uses them.
+**Correction:** this entry first said past corrections were "not fixable" because their
+headers were never stored. Wrong — the decision log keeps every classified message whole,
+so `eval` recovers them from there. Only a correction whose decision is gone replays bare.
 
 ### F-014 · `doctor` reported keychain secrets as coming from the environment
 **Why:** `load_into_env` copies keychain values into `os.environ`, and `inspect` ran
