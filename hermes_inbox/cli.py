@@ -277,7 +277,10 @@ def cmd_eval(args) -> int:
         cases = evals.golden_cases()
         corpus = f"golden set ({len(cases)} fixtures)"
     else:
-        cases = evals.cases_from_store(FeedbackStore(config.ensure_data_dir() / "feedback.jsonl"))
+        data = config.ensure_data_dir()
+        cases = evals.cases_from_store(
+            FeedbackStore(data / "feedback.jsonl"), DecisionLog(data / "decisions.jsonl")
+        )
         corpus = f"your corrections ({len(cases)})"
 
     if args.compare:
