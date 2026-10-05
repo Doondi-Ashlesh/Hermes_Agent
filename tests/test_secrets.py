@@ -356,3 +356,37 @@ def test_the_module_does_not_shadow_the_standard_library():
 
     assert hasattr(stdlib, "token_hex")
     assert stdlib is not secrets
+
+
+# --------------------------------------------------------------------------- #
+# the openai-compat key (O-004): a fourth secret, optional
+# --------------------------------------------------------------------------- #
+
+
+def test_the_openai_compat_key_can_come_from_the_keychain(keychain):
+    keychain._store[(secrets.SERVICE, "HERMES_OPENAI_API_KEY")] = "nvapi-stored"
+    assert Config.from_env().openai_api_key == "nvapi-stored"
+
+
+def test_the_openai_compat_key_is_located_and_never_read_out(keychain, tmp_path):
+    write_dotenv(tmp_path, HERMES_OPENAI_API_KEY="nvapi-in-dotenv")
+    keychain._store[(secrets.SERVICE, "HERMES_OPENAI_API_KEY")] = "nvapi-stored"
+
+    resolution = next(r for r in secrets.inspect() if r.name == "HERMES_OPENAI_API_KEY")
+    assert (resolution.source, resolution.shadowed) == (secrets.DOTENV, [secrets.KEYRING])
+    assert "nvapi" not in repr(resolution)
+
+
+def test_an_unset_optional_key_does_not_trouble_doctor(keychain, tmp_path):
+    """Most setups have no key for a local vLLM server; that is not a problem to report."""
+    from hermes_inbox import doctor
+
+    report = doctor.Report()
+    doctor.check_secrets(Config(data_dir=tmp_path), report)
+    assert not any("HERMES_OPENAI_API_KEY" in c.name for c in report.checks)
+    assert all(c.status != doctor.FAIL for c in report.checks)
+
+
+def test_import_moves_the_openai_compat_key_too(keychain, tmp_path):
+    write_dotenv(tmp_path, HERMES_OPENAI_API_KEY="nvapi-in-dotenv")
+    assert secrets.dotenv_values() == {"HERMES_OPENAI_API_KEY": "nvapi-in-dotenv"}

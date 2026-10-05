@@ -42,7 +42,7 @@ make test
 ```
 
 ```
-309 passed in 0.86s
+313 passed in 0.86s
 ```
 
 If this fails on a clean clone, that is a bug in the repo, not in your machine.
@@ -228,12 +228,12 @@ pip install 'hermes-inbox[keyring]'
 ```
 keychain: macOS Keyring
 
-  ✓ ANTHROPIC_API_KEY    .env  (also in keyring)
-  ✓ IMAP_PASSWORD        .env  (also in keyring)
-  ✓ TELEGRAM_BOT_TOKEN   .env  (also in keyring)
+  ✓ ANTHROPIC_API_KEY     .env  (also in keyring)
+  ✓ IMAP_PASSWORD         .env  (also in keyring)
+  ✓ TELEGRAM_BOT_TOKEN    .env  (also in keyring)
 ```
 
-`.env` still wins, so delete those three lines from `.env` to finish the move,
+`.env` still wins, so delete those lines from `.env` to finish the move,
 then run it again — the sources should read `keyring`. `import` deliberately
 does not edit `.env` for you; a tool that rewrites the file holding your
 credentials can only ever lose them.

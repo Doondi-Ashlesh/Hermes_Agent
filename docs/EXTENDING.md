@@ -299,7 +299,7 @@ hermes_inbox/
   agent.py        run loop — fetch, classify, gate, notify, record
   schema.py       Message, Verdict, GateDecision, Decision
   config.py       env → Config; add new keys here and in .env.example
-  secrets.py      the three secrets: environment, then .env, then OS keychain
+  secrets.py      the four secrets: environment, then .env, then OS keychain
   redact.py       secret-stripping, single path, runs before every model call
   classify.py     Anthropic provider + the shared prompt builders
   ollama.py       local provider
@@ -319,6 +319,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            309 tests, no network required
+tests/            313 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message; labels.json is its golden set
 ```
