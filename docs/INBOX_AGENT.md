@@ -301,8 +301,9 @@ HERMES_PROVIDER=openai-compat hermes-inbox eval --golden --concurrency 8
   fails with an error naming structured outputs, not a parse error.
 - `HERMES_OPENAI_MODEL` can stay empty: a vLLM or NIM server serves one model, and
   it is read from `/v1/models` once per process.
-- `HERMES_OPENAI_API_KEY` is optional and sent only when set. It is **not**
-  keychain-backed yet ([O-004](DECISIONS.md#o-004--openai-compat-is-verified-against-vllm-not-nim)).
+- `HERMES_OPENAI_API_KEY` is optional and sent only when set. It is a secret
+  like the other three: `hermes-inbox secrets set HERMES_OPENAI_API_KEY` keeps
+  it in the OS keychain instead of `.env`.
 - NIM is expected to work because it serves the same OpenAI-compatible API, but
   that has not been verified against a running NIM container (O-004).
 

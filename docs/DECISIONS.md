@@ -133,6 +133,15 @@ needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 
 ## Decisions
 
+### D-021 · The `openai-compat` key is a secret like the others
+**Why:** it sat in plaintext `.env` with no way out, while the other three could move to the
+keychain (D-018). Added to `secrets.SECRETS`, it gets the same resolution order, `import`,
+`set`, `status`, and shadow warning for free — and nothing else had to change, which is the
+seam working.
+**Optional, so silent when absent:** `doctor` lists only the secrets it finds, so a local
+vLLM server with no key reports nothing missing. Tested.
+**Rejected:** a separate store for optional secrets. One list, one precedence rule.
+
 ### D-020 · A fourth provider for any OpenAI-compatible server
 **Why:** vLLM and NVIDIA NIM both serve `/v1/chat/completions`, and they are where a
 self-hosted model actually runs at throughput — Ollama is the laptop path, not the GPU one.
@@ -299,8 +308,8 @@ swap-the-source claim rather than working around it.
 The request shape follows vLLM's structured-outputs docs; NVIDIA's docs were unreachable
 from the build environment, so NIM support for `response_format` json_schema is expected,
 not confirmed. Closing it takes one `eval --golden` against a running NIM container.
-`HERMES_OPENAI_API_KEY` is also not keychain-backed: adding a fourth secret touches every
-doc that says "three", and local servers usually need no key.
+The other half of this entry — `HERMES_OPENAI_API_KEY` not being keychain-backed — is
+closed: it is a fourth, optional secret (D-021).
 
 ### O-003 · Not validated against real mail
 Every accuracy claim is against 12 fixtures. Gates the next phase: strong recall → reply

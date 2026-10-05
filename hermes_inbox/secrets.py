@@ -1,7 +1,8 @@
-"""Where the three secrets come from.
+"""Where the secrets come from.
 
-Exactly three values are secret: the model key, the mailbox password, and the
-bot token. By default they sit in plaintext in `.env`, which is defensible on a
+Four values are secret: the model key, the mailbox password, the bot token,
+and — only for a self-hosted server that requires one — the `openai-compat`
+key. By default they sit in plaintext in `.env`, which is defensible on a
 laptop you alone use and poor anywhere else — `.env` survives backups, syncs to
 cloud folders, and is readable by anything running as you.
 
@@ -44,6 +45,8 @@ SECRETS: dict[str, str] = {
     "ANTHROPIC_API_KEY": "model key",
     "IMAP_PASSWORD": "mailbox app password",
     "TELEGRAM_BOT_TOKEN": "bot token",
+    # Optional: local vLLM and NIM servers usually run without one.
+    "HERMES_OPENAI_API_KEY": "openai-compat server key",
 }
 
 ENVIRONMENT, DOTENV, KEYRING = "environment", ".env", "keyring"
