@@ -39,6 +39,27 @@ jobs:
           ANTHROPIC_AUTH_TOKEN: ""
         run: pytest tests/ -q
 
+  lint:
+    name: lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # ruff and mypy are pinned in the dev extra, so a new release that adds
+      # a rule cannot turn this red on a commit that did not change.
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check hermes_inbox tests scripts
+
+      - name: Types
+        run: mypy
+
   docs:
     name: docs consistency
     runs-on: ubuntu-latest

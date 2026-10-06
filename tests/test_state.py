@@ -6,7 +6,6 @@ in docs/DECISIONS.md.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -233,7 +232,7 @@ def test_cursor_is_persisted_per_message_not_per_cycle(tmp_path):
         config=Config(data_dir=tmp_path, gate=GateConfig(threshold=0.5)),
         classify_fn=lambda m, e, c, client=None: Verdict(True, 0.9, "personal", "r"),
     ).cycle()
-    assert [d.message.uid for d in resumed.sent][0] == "105"
+    assert next(d.message.uid for d in resumed.sent) == "105"
     assert "101" not in [d.message.uid for d in resumed.sent]
 
 

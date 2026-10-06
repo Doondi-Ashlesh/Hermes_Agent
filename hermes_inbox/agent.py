@@ -10,7 +10,7 @@ machine, and is the same code path against fixtures and a live server.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .classify import classify as default_classify
 from .config import Config
@@ -28,11 +28,7 @@ class CycleResult:
     fetched: int = 0
     notified: int = 0
     labels_applied: int = 0
-    errors: list[str] = None
-
-    def __post_init__(self):
-        if self.errors is None:
-            self.errors = []
+    errors: list[str] = field(default_factory=list)
 
 
 class Agent:
@@ -253,7 +249,7 @@ class Agent:
                 pool.submit(self.classify_fn, message, examples, self.config, client=self.client)
                 for message in messages
             ]
-            for message, future in zip(messages, futures):
+            for message, future in zip(messages, futures, strict=True):
                 try:
                     yield message, future.result(), None
                 except Exception as exc:

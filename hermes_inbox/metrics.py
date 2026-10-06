@@ -16,8 +16,8 @@ equally consistent with a classifier that misses one in two.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 #: z for a two-sided 95% interval.
 Z95 = 1.959963984540054
@@ -68,7 +68,7 @@ def brier(labels: Sequence[bool], scores: Sequence[float]) -> float:
     """Mean squared error of the score as a probability. 0 is perfect, 0.25 is a coin."""
     if not labels:
         return 0.0
-    return sum((s - float(y)) ** 2 for y, s in zip(labels, scores)) / len(labels)
+    return sum((s - float(y)) ** 2 for y, s in zip(labels, scores, strict=True)) / len(labels)
 
 
 @dataclass(frozen=True)
@@ -87,7 +87,7 @@ def reliability(labels: Sequence[bool], scores: Sequence[float], bins: int = 5) 
     empty or singletons and the table stops saying anything.
     """
     buckets: list[list[tuple[bool, float]]] = [[] for _ in range(bins)]
-    for y, s in zip(labels, scores):
+    for y, s in zip(labels, scores, strict=True):
         index = min(int(s * bins), bins - 1)  # a score of exactly 1.0 lands in the top bin
         buckets[index].append((y, s))
     out = []
@@ -135,7 +135,7 @@ def sweep(labels: Sequence[bool], scores: Sequence[float]) -> list[OperatingPoin
     positives = sum(1 for y in labels if y)
     points = []
     for threshold in sorted(set(scores), reverse=True):
-        tp = sum(1 for y, s in zip(labels, scores) if s >= threshold and y)
+        tp = sum(1 for y, s in zip(labels, scores, strict=True) if s >= threshold and y)
         alerts = sum(1 for s in scores if s >= threshold)
         points.append(
             OperatingPoint(
@@ -192,8 +192,8 @@ def mcnemar(a_correct: Sequence[bool], b_correct: Sequence[bool]) -> McNemar:
     """
     if len(a_correct) != len(b_correct):
         raise ValueError("McNemar needs both classifiers scored on the same examples")
-    only_a = sum(1 for x, y in zip(a_correct, b_correct) if x and not y)
-    only_b = sum(1 for x, y in zip(a_correct, b_correct) if y and not x)
+    only_a = sum(1 for x, y in zip(a_correct, b_correct, strict=True) if x and not y)
+    only_b = sum(1 for x, y in zip(a_correct, b_correct, strict=True) if y and not x)
     n = only_a + only_b
     if n == 0:
         return McNemar(0, 0, 1.0)

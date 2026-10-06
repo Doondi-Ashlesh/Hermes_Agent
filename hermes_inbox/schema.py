@@ -44,7 +44,7 @@ class Message:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Message":
+    def from_dict(cls, data: dict[str, Any]) -> Message:
         data = dict(data)
         received = data.get("received_at")
         if isinstance(received, str):
@@ -68,7 +68,7 @@ class Verdict:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Verdict":
+    def from_dict(cls, data: dict[str, Any]) -> Verdict:
         return cls(
             important=bool(data["important"]),
             score=float(data["score"]),
@@ -107,7 +107,7 @@ class Decision:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Decision":
+    def from_dict(cls, data: dict[str, Any]) -> Decision:
         return cls(
             message=Message.from_dict(data["message"]),
             verdict=Verdict.from_dict(data["verdict"]),

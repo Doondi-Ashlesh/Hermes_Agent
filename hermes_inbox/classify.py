@@ -9,7 +9,8 @@ the volatile per-message content goes last.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from .config import Config
 from .feedback import Example, render_examples
@@ -89,6 +90,8 @@ def coerce_verdict(data: dict) -> Verdict:
 
     data = dict(data)
     raw = data.get("score")
+    if raw is None:
+        raise ValueError("verdict has no usable score: None")
     try:
         score = float(raw)
     except (TypeError, ValueError):
@@ -159,15 +162,17 @@ def classify(
     client = client or anthropic.Anthropic()
     safe = redact_message(message)
 
+    output_config: dict[str, Any] = {"format": {"type": "json_schema", "schema": SCHEMA}}
+    if config.effort:
+        output_config["effort"] = config.effort
+
     kwargs = {
         "model": config.model,
         "max_tokens": 1024,
         "system": build_system(examples, ttl=config.cache_ttl),
         "messages": [{"role": "user", "content": build_user(safe)}],
-        "output_config": {"format": {"type": "json_schema", "schema": SCHEMA}},
+        "output_config": output_config,
     }
-    if config.effort:
-        kwargs["output_config"]["effort"] = config.effort
 
     response = client.messages.create(**kwargs)
 

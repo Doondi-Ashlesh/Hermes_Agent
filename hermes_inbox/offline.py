@@ -82,9 +82,8 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
 
     best: tuple[float, str, str] | None = None
     for category, score, reason, pattern in _SIGNALS:
-        if pattern.search(haystack):
-            if best is None or score > best[0]:
-                best = (score, category, reason)
+        if pattern.search(haystack) and (best is None or score > best[0]):
+            best = (score, category, reason)
 
     if best is None:
         score, category, reason = (

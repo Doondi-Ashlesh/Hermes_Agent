@@ -10,9 +10,8 @@ from .agent import Agent
 from .config import Config
 from .feedback import Example, FeedbackStore
 from .notify.console import ConsoleNotifier
-from .state import DecisionLog
-
 from .providers import NAMES as PROVIDERS
+from .state import DecisionLog
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "inbox.json"
 

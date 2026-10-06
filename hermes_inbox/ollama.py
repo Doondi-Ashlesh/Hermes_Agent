@@ -86,4 +86,4 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
         raise OllamaError(f"ollama returned an unusable verdict: {exc}") from exc
 
 
-__all__ = ["classify", "OllamaError", "SYSTEM"]
+__all__ = ["SYSTEM", "OllamaError", "classify"]

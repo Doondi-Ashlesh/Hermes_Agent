@@ -13,6 +13,13 @@ belongs in the code, the tests, or the doc the entry points at.
 
 ## Failures
 
+### F-018 · `doctor` crashed on an Ollama host with a trailing slash
+**Why:** it split `HERMES_OLLAMA_HOST` on ":" by hand, so `http://localhost:11434/` made
+`int("11434/")` raise — a traceback from the command that exists to diagnose a bad setup.
+Found next to a type-checker warning about the same lines, not by the type checker itself.
+**✅ Fixed** — both provider probes parse the URL with `urlparse`; a test covers the slash,
+a missing port, and https.
+
 ### F-017 · Relabeling a message kept both answers
 **Why:** the store is append-only and every reader took every line, so correcting the same
 message twice put it in the prompt with both labels, counted it twice, and scored it twice
@@ -132,6 +139,17 @@ needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 ---
 
 ## Decisions
+
+### D-022 · Lint and type-check in CI, with the tools pinned
+**Why:** the suite tested behaviour but nothing checked the code itself — the first gap a
+reviewer from a larger engineering org would see. `ruff` lints with an explicit rule set
+(the tool's defaults move between releases) and `mypy` type-checks the package. Both are
+pinned exactly, so a new release cannot turn CI red on an unchanged commit.
+**What it found:** 36 lint findings and 8 type errors, all fixed. Most were style; the
+useful ones were `zip()` silently truncating mismatched label/score lists in `metrics.py`
+(now `strict=True`) and F-018.
+**Rejected for now:** the formatter. It would rewrite 33 files and bury the real changes;
+it gets its own change. Line length (E501) waits for it.
 
 ### D-021 · The `openai-compat` key is a secret like the others
 **Why:** it sat in plaintext `.env` with no way out, while the other three could move to the

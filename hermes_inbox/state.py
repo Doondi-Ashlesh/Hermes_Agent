@@ -19,8 +19,8 @@ import json
 import os
 import re
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from .schema import Decision
 

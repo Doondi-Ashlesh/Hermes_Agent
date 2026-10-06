@@ -13,10 +13,10 @@ worse.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
 
 from .schema import Message
 
@@ -38,7 +38,7 @@ class Example:
     headers: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_message(cls, message: Message, label: bool, note: str = "") -> "Example":
+    def from_message(cls, message: Message, label: bool, note: str = "") -> Example:
         return cls(
             uid=message.uid,
             sender=message.sender,
