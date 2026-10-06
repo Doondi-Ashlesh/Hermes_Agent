@@ -14,6 +14,8 @@ Uses urllib so the package needs no HTTP dependency.
 
 from __future__ import annotations
 
+import contextlib
+
 from ..http import HttpError, post_json
 from ..logs import get_logger
 from ..schema import Decision
@@ -108,7 +110,8 @@ class TelegramNotifier:
             action, _, uid = (query.get("data") or "").partition(":")
             if action in ("ok", "no") and uid:
                 labels.append((uid, action == "ok"))
-            try:
+            # The acknowledgement is cosmetic; never lose the label over it.
+            with contextlib.suppress(TelegramError):
                 self._call(
                     "answerCallbackQuery",
                     {
@@ -116,8 +119,6 @@ class TelegramNotifier:
                         "text": "Noted — thanks." if action == "ok" else "Noted, I'll stop flagging these.",
                     },
                 )
-            except TelegramError:
-                pass  # acknowledgement is cosmetic; never lose the label over it
 
         return labels, next_offset
 

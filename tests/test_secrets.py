@@ -17,7 +17,6 @@ import pytest
 from hermes_inbox import secrets
 from hermes_inbox.config import Config
 
-
 # --------------------------------------------------------------------------- #
 # a keyring that behaves however the test needs it to
 # --------------------------------------------------------------------------- #

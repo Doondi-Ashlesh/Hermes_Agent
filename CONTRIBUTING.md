@@ -10,12 +10,13 @@ Nothing is "done" until it has been run.
 
 ```bash
 make test      # must be green before any commit
+make lint      # ruff (lint) and mypy (types); pinned versions
 make check     # docs consistency
 make demo      # end-to-end, no credentials
 make diagrams  # mermaid parses (needs node; CI runs it regardless)
 ```
 
-CI runs all four on every push and pull request
+CI runs all five on every push and pull request
 (`.github/workflows/ci.yml`), across Python 3.10-3.13. Green locally is not
 the same as green on a clean machine — that is what the matrix is for.
 
@@ -75,6 +76,7 @@ being added, in kebab-case. The layers are the ones in
 | `runtime` | `agent.py`, `state.py`, `cli.py`, `config.py`, `doctor.py`, `secrets.py` | `runtime/concurrent-classify` |
 | `observability` | `logs.py`, `http.py` | `observability/cost-metrics` |
 | `docs` | `docs/`, `README.md`, this file | `docs/runbook` |
+| `tooling` | `.github/`, `pyproject.toml`, `Makefile` — how the code is checked, not what it does | `tooling/lint-and-typecheck` |
 
 A change spanning layers takes the name of the one it is really about.
 
@@ -114,7 +116,7 @@ tracked-file half; the branch-naming table above covers the other.
 hermes_inbox/     the inbox agent (see docs/INBOX_AGENT.md)
   sources/        MailSource implementations
   notify/         Notifier implementations
-tests/            313 tests, no network required
+tests/            317 tests, no network required
 fixtures/         offline mailbox, including one adversarial message, and its golden labels
 docs/             ARCHITECTURE · PLAN · DECISIONS · INBOX_AGENT · adr/
 ```

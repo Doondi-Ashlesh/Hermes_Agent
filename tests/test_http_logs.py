@@ -137,7 +137,7 @@ def test_backoff_grows_and_is_jittered(monkeypatch):
 
     assert len(waits) == 3
     assert waits[0] < waits[1] < waits[2], f"not exponential: {waits}"
-    assert all(base <= w <= base * 1.1 for w, base in zip(waits, [1.0, 2.0, 4.0]))
+    assert all(base <= w <= base * 1.1 for w, base in zip(waits, [1.0, 2.0, 4.0], strict=True))
 
 
 def test_backoff_is_capped(monkeypatch):
@@ -171,9 +171,8 @@ def test_url_query_is_not_logged(monkeypatch, caplog):
     monkeypatch.setattr(urllib.request, "urlopen", responder(urllib.error.URLError("down")))
     logs.configure("DEBUG")
 
-    with caplog.at_level(logging.WARNING, logger="hermes_inbox"):
-        with pytest.raises(http.HttpError):
-            http.post_json("http://x.example/path?secret=abc123", {}, retries=1)
+    with caplog.at_level(logging.WARNING, logger="hermes_inbox"), pytest.raises(http.HttpError):
+        http.post_json("http://x.example/path?secret=abc123", {}, retries=1)
 
     assert "abc123" not in caplog.text
 

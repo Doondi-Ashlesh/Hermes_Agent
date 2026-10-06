@@ -7,7 +7,6 @@ provider, which is what makes `hermes-inbox demo` and the test suite possible.
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 
 from ..schema import Message

@@ -319,6 +319,6 @@ hermes_inbox/
   notify/         Notifier implementations (base, telegram, console)
 scripts/
   check_links.py  doc link and anchor verification
-tests/            313 tests, no network required
+tests/            317 tests, no network required
 fixtures/         offline mailbox incl. one adversarial message; labels.json is its golden set
 ```

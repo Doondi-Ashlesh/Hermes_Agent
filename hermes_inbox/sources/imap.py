@@ -59,8 +59,11 @@ def _body_text(msg: EmailMessage) -> str:
 
 
 def _received_at(msg: EmailMessage) -> datetime:
+    raw = msg.get("Date")
+    if not raw:
+        return datetime.now(timezone.utc)
     try:
-        parsed = parsedate_to_datetime(msg.get("Date"))
+        parsed = parsedate_to_datetime(raw)
         if parsed is not None:
             return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
     except (TypeError, ValueError):
@@ -96,7 +99,7 @@ class ImapSource:
             conn.login(self.user, self.password)
             conn.select(self.folder, readonly=True)
 
-            status, data = conn.uid("SEARCH", None, criteria)
+            status, data = conn.uid("SEARCH", criteria)  # imaplib skips a None charset; omitting it is identical
             if status != "OK" or not data or not data[0]:
                 return []
 

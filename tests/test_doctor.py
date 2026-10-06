@@ -274,3 +274,22 @@ def test_cli_reports_ready_when_it_is(capsys, monkeypatch, tmp_path):
     out = capsys.readouterr().out
     assert "ready to run" in out
     assert SECRET not in out and APP_PASSWORD not in out
+
+
+@pytest.mark.parametrize(
+    "host,expected",
+    [
+        ("http://localhost:11434", ("localhost", 11434)),
+        ("http://localhost:11434/", ("localhost", 11434)),  # crashed doctor with a traceback
+        ("http://gpu-box", ("gpu-box", 11434)),
+        ("https://ollama.internal:8443/", ("ollama.internal", 8443)),
+    ],
+)
+def test_ollama_host_is_parsed_as_a_url(tmp_path, monkeypatch, host, expected):
+    """doctor exists to diagnose a bad setup; a trailing slash must not crash it."""
+    probed = []
+    monkeypatch.setattr(
+        doctor, "_reachable", lambda h, p, timeout=5.0: probed.append((h, p)) or (True, "reachable")
+    )
+    doctor.run(configured(tmp_path, provider="ollama", ollama_host=host), login=False)
+    assert probed[0] == expected

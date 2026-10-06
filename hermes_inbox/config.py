@@ -66,7 +66,7 @@ class GateConfig:
     quiet_end: int | None = None
 
     @classmethod
-    def from_env(cls) -> "GateConfig":
+    def from_env(cls) -> GateConfig:
         quiet = os.environ.get("HERMES_QUIET_HOURS", "").strip()
         start = end = None
         if "-" in quiet:
@@ -123,7 +123,7 @@ class Config:
     gate: GateConfig = field(default_factory=GateConfig)
 
     @classmethod
-    def from_env(cls) -> "Config":
+    def from_env(cls) -> Config:
         load_dotenv()
         # Only for what is still missing, and only if a keychain exists. Placed
         # after `.env` so an existing install behaves identically and an

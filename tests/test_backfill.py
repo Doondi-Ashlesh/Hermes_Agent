@@ -16,7 +16,7 @@ import pytest
 from hermes_inbox.agent import Agent
 from hermes_inbox.cli import main
 from hermes_inbox.config import Config, GateConfig
-from hermes_inbox.schema import Message, Verdict
+from hermes_inbox.schema import Verdict
 from hermes_inbox.sources.fixtures import FixtureSource
 from hermes_inbox.state import State
 
@@ -177,7 +177,11 @@ def seed(capsys):
 def test_list_sorts_by_score_descending(capsys):
     seed(capsys)
     main(["list"])
-    scores = [float(l.split()[1]) for l in capsys.readouterr().out.splitlines() if l.startswith(("▲", " 0"))]
+    scores = [
+        float(line.split()[1])
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith(("▲", " 0"))
+    ]
     assert scores == sorted(scores, reverse=True)
 
 

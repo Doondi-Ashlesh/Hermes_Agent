@@ -165,4 +165,4 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
         raise OpenAICompatError(f"server returned an unusable verdict: {exc}") from exc
 
 
-__all__ = ["classify", "resolve_model", "OpenAICompatError"]
+__all__ = ["OpenAICompatError", "classify", "resolve_model"]
