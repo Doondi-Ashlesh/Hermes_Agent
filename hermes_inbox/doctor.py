@@ -76,6 +76,18 @@ def _reachable(host: str, port: int, timeout: float = 5.0) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}"
 
 
+def _endpoint(url: str, default_port: int) -> tuple[str, int]:
+    """Host and port from a URL, however it is written.
+
+    Parsed as a URL rather than split on ":" by hand, which crashed on a
+    trailing slash (`http://localhost:11434/`, F-018).
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url if "://" in url else f"http://{url}")
+    return parsed.hostname or "", parsed.port or default_port
+
+
 def check_provider(config: Config, report: Report) -> None:
     from . import providers
     from .offline import has_credentials
@@ -85,9 +97,8 @@ def check_provider(config: Config, report: Report) -> None:
     if name == "anthropic":
         report.add("model provider", OK, f"anthropic · {config.model}")
     elif name == "ollama":
-        host = config.ollama_host.replace("http://", "").replace("https://", "")
-        hostname, _, port = host.partition(":")
-        up, detail = _reachable(hostname, int(port or 11434), timeout=2)
+        hostname, port = _endpoint(config.ollama_host, 11434)
+        up, detail = _reachable(hostname, port, timeout=2)
         report.add(
             "model provider",
             OK if up else FAIL,
@@ -95,15 +106,13 @@ def check_provider(config: Config, report: Report) -> None:
             "" if up else "start it with: ollama serve",
         )
     elif name == "openai-compat":
-        from urllib.parse import urlparse
-
-        url = urlparse(config.openai_base_url)
-        port = url.port or (443 if url.scheme == "https" else 80)
-        up, detail = _reachable(url.hostname or "", port, timeout=2)
+        default = 443 if config.openai_base_url.startswith("https") else 80
+        hostname, port = _endpoint(config.openai_base_url, default)
+        up, detail = _reachable(hostname, port, timeout=2)
         report.add(
             "model provider",
             OK if up else FAIL,
-            f"openai-compat · {config.openai_model or 'served model'} · {url.hostname}:{port}"
+            f"openai-compat · {config.openai_model or 'served model'} · {hostname}:{port}"
             f" · {detail}",
             "" if up else "start the server (e.g. vllm serve <model>), or fix HERMES_OPENAI_BASE_URL",
         )
