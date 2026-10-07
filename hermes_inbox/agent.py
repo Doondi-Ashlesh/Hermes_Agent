@@ -145,9 +145,7 @@ class Agent:
                         },
                     )
                 except Exception as exc:
-                    log.warning(
-                        "notify failed", extra={"uid": message.uid, "error": str(exc)}
-                    )
+                    log.warning("notify failed", extra={"uid": message.uid, "error": str(exc)})
                     result.errors.append(f"notify failed for {message.uid}: {exc}")
 
             # Persist per message, not per cycle. Held only in memory, a crash
@@ -233,9 +231,11 @@ class Agent:
         if workers <= 1:
             for message in messages:
                 try:
-                    yield message, self.classify_fn(
-                        message, examples, self.config, client=self.client
-                    ), None
+                    yield (
+                        message,
+                        self.classify_fn(message, examples, self.config, client=self.client),
+                        None,
+                    )
                 except Exception as exc:
                     yield message, None, exc
                     return

@@ -4,13 +4,17 @@ Pure functions, standard library only. They exist because a point estimate on a
 few dozen labels is not a measurement: "recall 100%" on 4 important emails is
 equally consistent with a classifier that misses one in two.
 
-| Question | Tool | Why this one |
-|---|---|---|
-| How sure is this rate? | Wilson score interval | Well-behaved at 0/n and n/n, where the textbook normal interval collapses to zero width |
-| Does the score mean what it says? | Brier score, expected calibration error | The gate thresholds the score, so a miscalibrated score moves the threshold's meaning |
-| Where should the threshold be? | Sweep every distinct score | The operating point is a recall target, not a default someone typed |
-| Is provider A really better than B? | Exact McNemar test | Both are scored on the *same* examples; an unpaired comparison throws that away |
-| How slow is it? | Nearest-rank percentiles | p95 is what a backlog feels like; the mean hides it |
+- **How sure is this rate?** Wilson score interval. Well-behaved at 0/n and
+  n/n, where the textbook normal interval collapses to zero width.
+- **Does the score mean what it says?** Brier score, expected calibration error.
+  The gate thresholds the score, so a miscalibrated score moves the
+  threshold's meaning.
+- **Where should the threshold be?** Sweep every distinct score. The operating
+  point is a recall target, not a default someone typed.
+- **Is provider A really better than B?** Exact McNemar test. Both are scored on
+  the *same* examples; an unpaired comparison throws that away.
+- **How slow is it?** Nearest-rank percentiles. p95 is what a backlog feels
+  like; the mean hides it.
 """
 
 from __future__ import annotations

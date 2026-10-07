@@ -32,7 +32,9 @@ class TelegramError(RuntimeError):
 class TelegramNotifier:
     name = "telegram"
 
-    def __init__(self, token: str, chat_id: str, timeout: int = 20, retries: int = 3, backoff: float = 0.5):
+    def __init__(
+        self, token: str, chat_id: str, timeout: int = 20, retries: int = 3, backoff: float = 0.5
+    ):
         self.token = token
         self.chat_id = chat_id
         self.timeout = timeout
@@ -68,7 +70,8 @@ class TelegramNotifier:
             lines.append(f"→ _{_escape(verdict.suggested_action)}_")
         lines.append("")
         lines.append(
-            f"`{verdict.category}` · score {verdict.score:.2f} · rule `{_escape(decision.gate.rule)}`"
+            f"`{verdict.category}` · score {verdict.score:.2f}"
+            f" · rule `{_escape(decision.gate.rule)}`"
         )
 
         self._call(
@@ -116,7 +119,9 @@ class TelegramNotifier:
                     "answerCallbackQuery",
                     {
                         "callback_query_id": query["id"],
-                        "text": "Noted — thanks." if action == "ok" else "Noted, I'll stop flagging these.",
+                        "text": "Noted — thanks."
+                        if action == "ok"
+                        else "Noted, I'll stop flagging these.",
                     },
                 )
 

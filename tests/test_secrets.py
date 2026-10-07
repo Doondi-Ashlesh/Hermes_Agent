@@ -124,10 +124,8 @@ def test_keyring_can_be_switched_off_entirely(monkeypatch, keychain):
 
 def test_a_broken_backend_degrades_instead_of_raising(monkeypatch):
     """A locked or damaged keychain must not stop the agent from starting."""
-    monkeypatch.setitem(
-        sys.modules, "keyring", fake_keyring(raises=RuntimeError("locked"))
-    )
-    assert secrets.get("IMAP_PASSWORD") is None       # no exception escapes
+    monkeypatch.setitem(sys.modules, "keyring", fake_keyring(raises=RuntimeError("locked")))
+    assert secrets.get("IMAP_PASSWORD") is None  # no exception escapes
     assert secrets.load_into_env() == []
 
 
@@ -232,7 +230,7 @@ def test_dotenv_values_ignores_comments_and_non_secrets(tmp_path):
     (tmp_path / ".env").write_text(
         "# IMAP_PASSWORD=commented-out\n"
         "HERMES_THRESHOLD=0.9\n"
-        "TELEGRAM_BOT_TOKEN=\n"        # present but empty
+        "TELEGRAM_BOT_TOKEN=\n"  # present but empty
         "IMAP_PASSWORD='quoted-value'\n",
         encoding="utf-8",
     )

@@ -37,9 +37,9 @@ def isolated(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     "k,n,low,high",
     [
-        (4, 4, 0.5101, 1.0),       # the golden set's recall: perfect, and still wide
-        (0, 4, 0.0, 0.4899),       # symmetric at the other end
-        (5, 10, 0.2366, 0.7634),   # textbook value
+        (4, 4, 0.5101, 1.0),  # the golden set's recall: perfect, and still wide
+        (0, 4, 0.0, 0.4899),  # symmetric at the other end
+        (5, 10, 0.2366, 0.7634),  # textbook value
         (81, 263, 0.2553, 0.3662),  # Wilson (1927) worked example, as usually cited
     ],
 )
@@ -264,7 +264,9 @@ def test_concurrent_replay_is_actually_concurrent():
 
 
 def test_integer_labels_count_the_same_as_booleans():
-    as_bool = evals.Report(threshold=0.5, outcomes=[evals.Outcome("1", "s", "a", True, 0.9, "o", 0.0)])
+    as_bool = evals.Report(
+        threshold=0.5, outcomes=[evals.Outcome("1", "s", "a", True, 0.9, "o", 0.0)]
+    )
     as_int = evals.Report(threshold=0.5, outcomes=[evals.Outcome("1", "s", "a", 1, 0.9, "o", 0.0)])
     assert as_int.true_positive == as_bool.true_positive == 1
     assert as_int.correct() == [True] and as_int.misses == []
@@ -288,7 +290,9 @@ def test_a_failing_provider_stops_the_replay_without_draining_the_backlog():
 
 def test_latency_is_measured_per_call():
     cases = evals.golden_cases()[:3]
-    report = evals.replay(cases, Config(), classify_fn=scripted({c.message.uid: 0.5 for c in cases}, 0.02))
+    report = evals.replay(
+        cases, Config(), classify_fn=scripted({c.message.uid: 0.5 for c in cases}, 0.02)
+    )
     assert all(o.latency >= 0.015 for o in report.outcomes)
     assert report.latency(95) >= report.latency(50) > 0
 
@@ -356,8 +360,21 @@ def test_min_recall_gates_the_exit_code(capsys, monkeypatch):
     assert main(["eval", "--golden", "--provider", "offline", "--min-recall", "1.0"]) == 0
 
     # A stricter threshold drops recall; the gate must notice.
-    assert main(["eval", "--golden", "--provider", "offline", "--threshold", "0.92",
-                 "--min-recall", "0.9"]) == 1
+    assert (
+        main(
+            [
+                "eval",
+                "--golden",
+                "--provider",
+                "offline",
+                "--threshold",
+                "0.92",
+                "--min-recall",
+                "0.9",
+            ]
+        )
+        == 1
+    )
     assert "below --min-recall" in capsys.readouterr().err
 
 

@@ -83,7 +83,9 @@ class Report:
         return outcome.score >= self.threshold
 
     def _count(self, predicted: bool, label: bool) -> int:
-        return sum(1 for o in self.outcomes if self._predicted(o) == predicted and bool(o.label) == label)
+        return sum(
+            1 for o in self.outcomes if self._predicted(o) == predicted and bool(o.label) == label
+        )
 
     @property
     def total(self) -> int:
@@ -212,8 +214,7 @@ class Report:
     def render(self, verbose: bool = False) -> str:
         if not self.total:
             return (
-                "No labeled examples yet.\n"
-                "Run the agent, correct it a few times, then re-run this."
+                "No labeled examples yet.\nRun the agent, correct it a few times, then re-run this."
             )
         lines = [
             f"Replayed {self.total} labeled example(s) ({self.positives} important),"
@@ -230,7 +231,8 @@ class Report:
             "",
             f"  calibration  brier {self.brier:.3f} · ece {self.ece:.3f}"
             "   (0 is perfect; brier 0.25 is a coin flip)",
-            f"  latency      p50 {self.latency(50) * 1000:.0f}ms · p95 {self.latency(95) * 1000:.0f}ms"
+            f"  latency      p50 {self.latency(50) * 1000:.0f}ms"
+            f" · p95 {self.latency(95) * 1000:.0f}ms"
             f" · {self.total} calls in {self.wall:.2f}s",
         ]
 
@@ -252,11 +254,14 @@ class Report:
             lines += ["", "  reliability   said   true    n"]
             for b in metrics.reliability(labels, scores):
                 lines.append(
-                    f"  {b.low:.1f}–{b.high:.1f}     {b.mean_score:5.2f}  {b.positive_rate:5.2f}  {b.count:3d}"
+                    f"  {b.low:.1f}–{b.high:.1f}     {b.mean_score:5.2f}"
+                    f"  {b.positive_rate:5.2f}  {b.count:3d}"
                 )
             lines += ["", "  threshold  precision  recall  pings"]
             for p in metrics.sweep(labels, scores):
-                lines.append(f"  {p.threshold:9.2f}  {p.precision:9.1%}  {p.recall:6.1%}  {p.alerts:5d}")
+                lines.append(
+                    f"  {p.threshold:9.2f}  {p.precision:9.1%}  {p.recall:6.1%}  {p.alerts:5d}"
+                )
 
         if self.misses:
             lines.append("")
@@ -327,7 +332,10 @@ def golden_cases(
         message = Message.from_dict({**item, "source": "golden"})
         entry = gold[message.uid]
         cases.append(
-            Case(message=message, example=Example.from_message(message, entry["label"], entry["note"]))
+            Case(
+                message=message,
+                example=Example.from_message(message, entry["label"], entry["note"]),
+            )
         )
     return cases
 

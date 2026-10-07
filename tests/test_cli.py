@@ -41,13 +41,13 @@ def isolated_env(tmp_path, monkeypatch):
     "uid,expect_notify",
     [
         ("101", False),  # newsletter
-        ("102", True),   # lead reply asking for pricing
-        ("103", True),   # payment failure
+        ("102", True),  # lead reply asking for pricing
+        ("103", True),  # payment failure
         ("104", False),  # marketing with fake urgency
-        ("105", True),   # security alert
+        ("105", True),  # security alert
         ("106", False),  # bounce
         ("109", False),  # prompt injection attempt
-        ("110", True),   # contract deadline
+        ("110", True),  # contract deadline
     ],
 )
 def test_offline_classifier_on_fixtures(uid, expect_notify):
@@ -74,12 +74,20 @@ def test_offline_signature_matches_real_classifier():
 
 def test_bulk_headers_weight_a_score_down():
     plain = Message(
-        uid="x", source="t", sender="a@b.example", subject="invoice past due",
-        body="Your invoice is past due.", received_at=datetime.now(timezone.utc),
+        uid="x",
+        source="t",
+        sender="a@b.example",
+        subject="invoice past due",
+        body="Your invoice is past due.",
+        received_at=datetime.now(timezone.utc),
     )
     bulk = Message(
-        uid="y", source="t", sender="a@b.example", subject="invoice past due",
-        body="Your invoice is past due.", received_at=datetime.now(timezone.utc),
+        uid="y",
+        source="t",
+        sender="a@b.example",
+        subject="invoice past due",
+        body="Your invoice is past due.",
+        received_at=datetime.now(timezone.utc),
         headers={"Precedence": "bulk"},
     )
     assert offline_classify(bulk).score < offline_classify(plain).score

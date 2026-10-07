@@ -114,8 +114,8 @@ def test_find_returns_the_most_recent_entry_for_a_uid(tmp_path):
 def test_index_survives_appends_after_a_lookup(tmp_path):
     log = DecisionLog(tmp_path / "d.jsonl")
     log.append(make_decision("1"))
-    assert log.find("1") is not None      # builds the index
-    log.append(make_decision("2"))        # must update it
+    assert log.find("1") is not None  # builds the index
+    log.append(make_decision("2"))  # must update it
     assert log.find("2") is not None
 
 
@@ -125,9 +125,9 @@ def test_finds_entries_written_by_another_process(tmp_path):
     writer = DecisionLog(tmp_path / "d.jsonl")
 
     writer.append(make_decision("1"))
-    assert reader.find("1") is not None   # reader builds its index here
+    assert reader.find("1") is not None  # reader builds its index here
 
-    writer.append(make_decision("2"))     # reader knows nothing about this
+    writer.append(make_decision("2"))  # reader knows nothing about this
     assert reader.find("2") is not None, "stale index must be rebuilt on a miss"
 
 
@@ -137,7 +137,7 @@ def test_stale_offset_is_detected_and_rebuilt(tmp_path):
     log.append(make_decision("2"))
     log.find("1")
 
-    log._index["1"] = log._index["2"]     # corrupt: points at the wrong record
+    log._index["1"] = log._index["2"]  # corrupt: points at the wrong record
     assert log.find("1").message.uid == "1"
 
 
@@ -158,7 +158,7 @@ def test_iter_all_streams_without_materializing(tmp_path):
     for uid in range(5):
         log.append(make_decision(str(uid)))
     stream = log.iter_all()
-    assert next(stream).message.uid == "0"   # yields before consuming the file
+    assert next(stream).message.uid == "0"  # yields before consuming the file
 
 
 def test_empty_log_is_safe(tmp_path):

@@ -164,12 +164,14 @@ def test_ollama_carries_corrections_in_its_system_turn(monkeypatch):
 @pytest.mark.parametrize(
     "raw,expected_score,expected_category",
     [
-        ({**GOOD, "score": 7.0}, 1.0, "lead"),          # out of range
-        ({**GOOD, "score": -2}, 0.0, "lead"),           # negative
+        ({**GOOD, "score": 7.0}, 1.0, "lead"),  # out of range
+        ({**GOOD, "score": -2}, 0.0, "lead"),  # negative
         ({**GOOD, "category": "invented"}, 0.81, "other"),  # not in the enum
     ],
 )
-def test_ollama_clamps_sloppy_small_model_output(monkeypatch, raw, expected_score, expected_category):
+def test_ollama_clamps_sloppy_small_model_output(
+    monkeypatch, raw, expected_score, expected_category
+):
     """A weak model must not be able to crash the polling loop."""
     monkeypatch.setattr(urllib.request, "urlopen", stub_urlopen(raw))
     verdict = ollama.classify(make_message(), [], Config())
@@ -228,8 +230,10 @@ class FakeServer:
             content = self.content if self.content is not None else json.dumps(self.verdict)
             reply = {
                 "choices": [
-                    {"message": {"role": "assistant", "content": content},
-                     "finish_reason": self.finish_reason}
+                    {
+                        "message": {"role": "assistant", "content": content},
+                        "finish_reason": self.finish_reason,
+                    }
                 ],
                 "usage": {"prompt_tokens": 900, "completion_tokens": 40},
             }
@@ -348,7 +352,10 @@ def test_openai_compat_reports_a_missing_server_clearly(monkeypatch):
 def test_openai_compat_explains_a_server_without_structured_outputs(monkeypatch):
     def reject(request, timeout=None):
         raise urllib.error.HTTPError(
-            request.full_url, 400, "Bad Request", {},
+            request.full_url,
+            400,
+            "Bad Request",
+            {},
             io.BytesIO(b'{"error": "response_format json_schema is not supported"}'),
         )
 
@@ -367,14 +374,19 @@ def test_concurrent_eval_discovers_the_model_once(monkeypatch, tmp_path, capsys)
     monkeypatch.setenv("HERMES_OPENAI_BASE_URL", "http://gpu-box:8000/v1")
     monkeypatch.delenv("HERMES_OPENAI_MODEL", raising=False)
 
-    assert main(["eval", "--golden", "--provider", "openai-compat", "--concurrency", "4", "--json"]) == 0
+    assert (
+        main(["eval", "--golden", "--provider", "openai-compat", "--concurrency", "4", "--json"])
+        == 0
+    )
     assert sum(url.endswith("/models") for url, _, _ in server.requests) == 1
     assert sum(url.endswith("/chat/completions") for url, _, _ in server.requests) == 12
     assert json.loads(capsys.readouterr().out)["openai-compat"]["total"] == 12
 
 
 @pytest.mark.parametrize("score", ["high", None, float("nan")])
-@pytest.mark.parametrize("module,error", [(ollama, "OllamaError"), (openai_compat, "OpenAICompatError")])
+@pytest.mark.parametrize(
+    "module,error", [(ollama, "OllamaError"), (openai_compat, "OpenAICompatError")]
+)
 def test_a_verdict_without_a_usable_score_fails_loudly(monkeypatch, module, error, score):
     """No score is not a low score. Defaulting to 0 would silently drop the message (F-004)."""
     raw = {**GOOD, "score": score}
@@ -396,7 +408,9 @@ def test_an_unusable_score_stops_the_cycle_without_advancing_the_cursor(tmp_path
     def garbage(message, examples, config, client=None):
         raise ollama.OllamaError("ollama returned an unusable verdict: 'high'")
 
-    agent = Agent(FixtureSource(FIXTURES), ConsoleNotifier(), Config(data_dir=tmp_path), classify_fn=garbage)
+    agent = Agent(
+        FixtureSource(FIXTURES), ConsoleNotifier(), Config(data_dir=tmp_path), classify_fn=garbage
+    )
     result = agent.cycle()
     assert result.errors and result.notified == 0
     assert agent.state.last_uid("fixtures") is None

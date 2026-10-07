@@ -114,7 +114,9 @@ def check_provider(config: Config, report: Report) -> None:
             OK if up else FAIL,
             f"openai-compat · {config.openai_model or 'served model'} · {hostname}:{port}"
             f" · {detail}",
-            "" if up else "start the server (e.g. vllm serve <model>), or fix HERMES_OPENAI_BASE_URL",
+            ""
+            if up
+            else "start the server (e.g. vllm serve <model>), or fix HERMES_OPENAI_BASE_URL",
         )
     else:
         report.add(

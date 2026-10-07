@@ -35,10 +35,9 @@ line-length = 100
 
 [tool.ruff.lint]
 # Explicit rather than the tool's default set, which moves between releases.
-# E501 (line length) waits for the formatter, which is a separate change.
 # RUF001-003: the CLI and docs use typographic marks (–, ·, −) on purpose.
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
-ignore = ["E501", "RUF001", "RUF002", "RUF003"]
+ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.mypy]
 python_version = "3.10"

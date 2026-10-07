@@ -156,9 +156,7 @@ def cmd_backfill(args) -> int:
 
     try:
         pending = [
-            m
-            for m in agent.source.fetch_since(since, args.limit)
-            if agent.log.find(m.uid) is None
+            m for m in agent.source.fetch_since(since, args.limit) if agent.log.find(m.uid) is None
         ]
     except NotImplementedError as exc:
         print(f"! {exc}", file=sys.stderr)
@@ -186,7 +184,9 @@ def cmd_backfill(args) -> int:
             return 0
 
     def progress(index, total, message, verdict):
-        print(f"  [{index}/{total}] {verdict.score:.2f} {verdict.category:<13} {message.subject[:46]}")
+        print(
+            f"  [{index}/{total}] {verdict.score:.2f} {verdict.category:<13} {message.subject[:46]}"
+        )
 
     result = agent.backfill(
         since, limit=args.limit, on_progress=progress, concurrency=args.concurrency
@@ -256,7 +256,9 @@ def cmd_feedback(args) -> int:
 
     label = args.verdict == "important"
     store.add(Example.from_message(decision.message, label, note=args.note or ""))
-    print(f"recorded: {decision.message.subject[:60]} → {'important' if label else 'not important'}")
+    print(
+        f"recorded: {decision.message.subject[:60]} → {'important' if label else 'not important'}"
+    )
     important, not_important = store.counts()
     print(f"corrections so far: {important} important · {not_important} not important")
     return 0
@@ -287,7 +289,8 @@ def cmd_eval(args) -> int:
         unknown = [n for n in requested if n not in PROVIDERS or n == "auto"]
         if unknown or len(requested) < 2:
             print(
-                f"! --compare takes two or more of: {', '.join(p for p in PROVIDERS if p != 'auto')}",
+                "! --compare takes two or more of: "
+                f"{', '.join(p for p in PROVIDERS if p != 'auto')}",
                 file=sys.stderr,
             )
             return 2
@@ -332,11 +335,17 @@ def cmd_eval(args) -> int:
     # A regression gate: the point estimate, since that is what a change moves.
     if args.min_recall is not None:
         if not cases:
-            print("! --min-recall with nothing to score — a gate must not pass on no data", file=sys.stderr)
+            print(
+                "! --min-recall with nothing to score — a gate must not pass on no data",
+                file=sys.stderr,
+            )
             return 1
         failing = {n: r.recall for n, r in reports.items() if r.recall < args.min_recall}
         for name, recall in failing.items():
-            print(f"! {name}: recall {recall:.1%} is below --min-recall {args.min_recall:.1%}", file=sys.stderr)
+            print(
+                f"! {name}: recall {recall:.1%} is below --min-recall {args.min_recall:.1%}",
+                file=sys.stderr,
+            )
         if failing:
             return 1
     return 0
@@ -438,7 +447,10 @@ def cmd_stats(args) -> int:
         return 0
 
     notified = sum(1 for d in decisions if d.gate.notify)
-    print(f"{len(decisions)} messages processed · {notified} notified ({notified/len(decisions):.0%})")
+    print(
+        f"{len(decisions)} messages processed · {notified} notified"
+        f" ({notified / len(decisions):.0%})"
+    )
     print(f"corrections: {important} important · {not_important} not important")
 
     by_category: dict[str, int] = {}
@@ -502,15 +514,22 @@ def main(argv: list[str] | None = None) -> int:
         "--compare", metavar="A,B,...", help="score several providers on the same cases, paired"
     )
     ev.add_argument(
-        "--golden", action="store_true", help="replay the labeled fixture set instead of your corrections"
+        "--golden",
+        action="store_true",
+        help="replay the labeled fixture set instead of your corrections",
     )
     ev.add_argument(
-        "--target-recall", type=float, default=0.95, help="recall the suggested threshold must reach"
+        "--target-recall",
+        type=float,
+        default=0.95,
+        help="recall the suggested threshold must reach",
     )
     ev.add_argument("--min-recall", type=float, help="exit 1 if recall is below this (for CI)")
     ev.add_argument("--concurrency", type=int, help="parallel calls (default HERMES_CONCURRENCY)")
     ev.add_argument("--json", action="store_true", help="machine-readable output")
-    ev.add_argument("-v", "--verbose", action="store_true", help="reliability table and threshold sweep")
+    ev.add_argument(
+        "-v", "--verbose", action="store_true", help="reliability table and threshold sweep"
+    )
     ev.set_defaults(func=cmd_eval)
 
     backfill = sub.add_parser("backfill", help="classify mail already received (does not notify)")
@@ -533,7 +552,9 @@ def main(argv: list[str] | None = None) -> int:
     listing.add_argument("--limit", type=int, default=40)
     listing.add_argument("--category")
     listing.add_argument("--min-score", type=float)
-    listing.add_argument("--needs-action", action="store_true", help="only those with a suggested action")
+    listing.add_argument(
+        "--needs-action", action="store_true", help="only those with a suggested action"
+    )
     listing.add_argument("--unlabeled", action="store_true", help="hide ones you already corrected")
     listing.set_defaults(func=cmd_list)
 

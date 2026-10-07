@@ -17,11 +17,11 @@ SKIP_PREFIXES = ("http://", "https://", "mailto:", "#!")
 
 def slug(heading: str) -> str:
     text = heading.strip()
-    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)   # [label](url) -> label
-    text = re.sub(r"[`*~]|<[^>]+>", "", text)              # code, emphasis, html
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # [label](url) -> label
+    text = re.sub(r"[`*~]|<[^>]+>", "", text)  # code, emphasis, html
     text = text.lower()
-    text = re.sub(r"[^\w\s-]", "", text)                   # punctuation, incl. ·
-    return re.sub(r"\s", "-", text)                        # one hyphen per space
+    text = re.sub(r"[^\w\s-]", "", text)  # punctuation, incl. ·
+    return re.sub(r"\s", "-", text)  # one hyphen per space
 
 
 def anchors(path: pathlib.Path) -> set[str]:
