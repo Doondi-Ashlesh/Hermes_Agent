@@ -57,6 +57,9 @@ jobs:
       - name: Lint
         run: ruff check hermes_inbox tests scripts
 
+      - name: Format
+        run: ruff format --check hermes_inbox tests scripts
+
       - name: Types
         run: mypy
 

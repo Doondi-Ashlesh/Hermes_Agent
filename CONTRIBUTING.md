@@ -10,7 +10,7 @@ Nothing is "done" until it has been run.
 
 ```bash
 make test      # must be green before any commit
-make lint      # ruff (lint) and mypy (types); pinned versions
+make lint      # ruff lint + format check, mypy types; `make format` fixes layout
 make check     # docs consistency
 make demo      # end-to-end, no credentials
 make diagrams  # mermaid parses (needs node; CI runs it regardless)

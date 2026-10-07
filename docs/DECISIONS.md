@@ -148,8 +148,10 @@ pinned exactly, so a new release cannot turn CI red on an unchanged commit.
 **What it found:** 36 lint findings and 8 type errors, all fixed. Most were style; the
 useful ones were `zip()` silently truncating mismatched label/score lists in `metrics.py`
 (now `strict=True`) and F-018.
-**Rejected for now:** the formatter. It would rewrite 33 files and bury the real changes;
-it gets its own change. Line length (E501) waits for it.
+**The formatter came separately** (a first draft of this entry said 33 files; at the
+configured width of 100 it was 22). One commit, layout only, verified by comparing every
+file's AST before and after, then listed in `.git-blame-ignore-revs` so `git blame` skips
+it. Line length (E501) was switched on with it; CI now checks formatting too.
 
 ### D-021 · The `openai-compat` key is a secret like the others
 **Why:** it sat in plaintext `.env` with no way out, while the other three could move to the

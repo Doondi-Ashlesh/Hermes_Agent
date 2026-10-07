@@ -2,7 +2,7 @@
 VENV := .venv
 PY := $(VENV)/bin/python
 
-.PHONY: help install test lint demo check run once eval golden stats clean
+.PHONY: help install test lint format demo check run once eval golden stats clean
 
 help:  ## Show this help
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[1m%-10s\033[0m %s\n", $$1, $$2}'
@@ -18,9 +18,13 @@ install: $(VENV)  ## Create the venv and install the package with dev extras
 test: install  ## Run the full suite (no network, no credentials)
 	$(PY) -m pytest tests/ -q
 
-lint: install  ## Lint (ruff) and type-check (mypy); versions pinned in pyproject
+lint: install  ## Lint, format check and type-check; versions pinned in pyproject
 	$(PY) -m ruff check hermes_inbox tests scripts
+	$(PY) -m ruff format --check hermes_inbox tests scripts
 	$(PY) -m mypy
+
+format: install  ## Apply the formatter (what `make lint` checks)
+	$(PY) -m ruff format hermes_inbox tests scripts
 
 check: install  ## Verify docs: links, anchors, env vars, CLI coverage
 	$(PY) scripts/check_links.py

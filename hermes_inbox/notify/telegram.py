@@ -70,7 +70,8 @@ class TelegramNotifier:
             lines.append(f"→ _{_escape(verdict.suggested_action)}_")
         lines.append("")
         lines.append(
-            f"`{verdict.category}` · score {verdict.score:.2f} · rule `{_escape(decision.gate.rule)}`"
+            f"`{verdict.category}` · score {verdict.score:.2f}"
+            f" · rule `{_escape(decision.gate.rule)}`"
         )
 
         self._call(

@@ -40,7 +40,8 @@ _SIGNALS: list[tuple[str, float, str, re.Pattern[str]]] = [
         0.8,
         "A person appears to be waiting on a reply or a decision.",
         re.compile(
-            r"\b(sign-?off|by (thursday|friday|monday|tomorrow|eod)|are you free|can you send|need your)\b",
+            r"\b(sign-?off|by (thursday|friday|monday|tomorrow|eod)"
+            r"|are you free|can you send|need your)\b",
             re.I,
         ),
     ),
@@ -83,7 +84,9 @@ def classify(message: Message, examples=None, config=None, client=None) -> Verdi
             important=False,
             score=0.02,
             category="spam",
-            reason="Contains text trying to instruct an email assistant — treated as a spam signal.",
+            reason=(
+                "Contains text trying to instruct an email assistant — treated as a spam signal."
+            ),
             suggested_action="",
         )
 

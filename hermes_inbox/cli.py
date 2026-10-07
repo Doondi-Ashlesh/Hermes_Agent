@@ -289,7 +289,8 @@ def cmd_eval(args) -> int:
         unknown = [n for n in requested if n not in PROVIDERS or n == "auto"]
         if unknown or len(requested) < 2:
             print(
-                f"! --compare takes two or more of: {', '.join(p for p in PROVIDERS if p != 'auto')}",
+                "! --compare takes two or more of: "
+                f"{', '.join(p for p in PROVIDERS if p != 'auto')}",
                 file=sys.stderr,
             )
             return 2
@@ -447,7 +448,8 @@ def cmd_stats(args) -> int:
 
     notified = sum(1 for d in decisions if d.gate.notify)
     print(
-        f"{len(decisions)} messages processed · {notified} notified ({notified / len(decisions):.0%})"
+        f"{len(decisions)} messages processed · {notified} notified"
+        f" ({notified / len(decisions):.0%})"
     )
     print(f"corrections: {important} important · {not_important} not important")
 

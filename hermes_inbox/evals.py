@@ -231,7 +231,8 @@ class Report:
             "",
             f"  calibration  brier {self.brier:.3f} · ece {self.ece:.3f}"
             "   (0 is perfect; brier 0.25 is a coin flip)",
-            f"  latency      p50 {self.latency(50) * 1000:.0f}ms · p95 {self.latency(95) * 1000:.0f}ms"
+            f"  latency      p50 {self.latency(50) * 1000:.0f}ms"
+            f" · p95 {self.latency(95) * 1000:.0f}ms"
             f" · {self.total} calls in {self.wall:.2f}s",
         ]
 
@@ -253,7 +254,8 @@ class Report:
             lines += ["", "  reliability   said   true    n"]
             for b in metrics.reliability(labels, scores):
                 lines.append(
-                    f"  {b.low:.1f}–{b.high:.1f}     {b.mean_score:5.2f}  {b.positive_rate:5.2f}  {b.count:3d}"
+                    f"  {b.low:.1f}–{b.high:.1f}     {b.mean_score:5.2f}"
+                    f"  {b.positive_rate:5.2f}  {b.count:3d}"
                 )
             lines += ["", "  threshold  precision  recall  pings"]
             for p in metrics.sweep(labels, scores):
