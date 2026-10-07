@@ -202,7 +202,5 @@ def inspect(dotenv_path: str | Path = ".env") -> list[Resolution]:
         if keyring_ok and get(name):
             places.append(KEYRING)
 
-        resolutions.append(
-            Resolution(name, places[0] if places else "", places[1:])
-        )
+        resolutions.append(Resolution(name, places[0] if places else "", places[1:]))
     return resolutions

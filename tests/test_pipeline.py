@@ -37,9 +37,7 @@ def make_message(**overrides) -> Message:
 
 
 def make_verdict(score: float = 0.9, category: str = "personal") -> Verdict:
-    return Verdict(
-        important=score >= 0.5, score=score, category=category, reason="because"
-    )
+    return Verdict(important=score >= 0.5, score=score, category=category, reason="because")
 
 
 # --------------------------------------------------------------------------- #
@@ -52,7 +50,10 @@ def make_verdict(score: float = 0.9, category: str = "personal") -> Verdict:
     [
         ("card 4111 1111 1111 1111 here", "4111 1111 1111 1111"),
         ("your code is 483920", "483920"),
-        ("token ghp_9fKq2mNvR8sT4wXyZ1aB3cD5eF7gH0jK2lM4", "ghp_9fKq2mNvR8sT4wXyZ1aB3cD5eF7gH0jK2lM4"),
+        (
+            "token ghp_9fKq2mNvR8sT4wXyZ1aB3cD5eF7gH0jK2lM4",
+            "ghp_9fKq2mNvR8sT4wXyZ1aB3cD5eF7gH0jK2lM4",
+        ),
         ("call +1 415 555 0198 now", "+1 415 555 0198"),
     ],
 )

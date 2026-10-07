@@ -18,15 +18,15 @@ from .redact import redact_message
 from .schema import Message, Verdict
 
 CATEGORIES = [
-    "personal",       # a human wrote to you specifically
-    "lead",           # a reply to outreach; someone interested
-    "billing",        # invoices, payment failures, receipts
-    "security",       # login alerts, password resets, breach notices
+    "personal",  # a human wrote to you specifically
+    "lead",  # a reply to outreach; someone interested
+    "billing",  # invoices, payment failures, receipts
+    "security",  # login alerts, password resets, breach notices
     "transactional",  # order confirmations, shipping, account notices
-    "newsletter",     # subscribed bulk mail
-    "promotion",      # unsolicited marketing
-    "automated",      # CI, monitoring, bounces, calendar
-    "spam",           # unwanted, possibly malicious
+    "newsletter",  # subscribed bulk mail
+    "promotion",  # unsolicited marketing
+    "automated",  # CI, monitoring, bounces, calendar
+    "spam",  # unwanted, possibly malicious
     "other",
 ]
 

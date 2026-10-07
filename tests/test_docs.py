@@ -50,7 +50,9 @@ def test_every_config_env_var_is_documented():
 
     documented = set(re.findall(r"^#?\s*([A-Z_]+)=", read(".env.example"), re.M))
     missing = declared - documented
-    assert not missing, f"env vars read by config.py but absent from .env.example: {sorted(missing)}"
+    assert not missing, (
+        f"env vars read by config.py but absent from .env.example: {sorted(missing)}"
+    )
 
 
 def test_no_stale_env_vars_in_example():
@@ -97,7 +99,9 @@ def test_decision_log_entries_are_well_formed():
     log = read("docs/DECISIONS.md")
     ids = re.findall(r"^### ([DFO]-\d{3}) · ", log, re.M)
     assert ids, "decision log has no entries"
-    assert len(ids) == len(set(ids)), f"duplicate ids: {sorted({i for i in ids if ids.count(i) > 1})}"
+    assert len(ids) == len(set(ids)), (
+        f"duplicate ids: {sorted({i for i in ids if ids.count(i) > 1})}"
+    )
     for prefix in ("D", "F", "O"):
         assert any(i.startswith(prefix) for i in ids), f"no {prefix}-nnn entries"
 
@@ -145,12 +149,18 @@ def test_branch_layers_match_the_architecture():
     assert layers, "CONTRIBUTING.md has no branch-layer table"
 
     modules = {p.stem for p in (ROOT / "hermes_inbox").glob("*.py")} - {"__init__"}
-    packages = {p.name for p in (ROOT / "hermes_inbox").iterdir() if p.is_dir() and not p.name.startswith("_")}
+    packages = {
+        p.name
+        for p in (ROOT / "hermes_inbox").iterdir()
+        if p.is_dir() and not p.name.startswith("_")
+    }
     claimed = set(re.findall(r"`([a-z_]+)\.py`|`([a-z]+)/`", guide))
     named = {a or b for a, b in claimed}
 
     unknown = {m for m in named if m and m not in modules and m not in packages and m != "docs"}
-    assert not unknown, f"CONTRIBUTING.md maps layers onto modules that do not exist: {sorted(unknown)}"
+    assert not unknown, (
+        f"CONTRIBUTING.md maps layers onto modules that do not exist: {sorted(unknown)}"
+    )
 
     uncovered = modules - named
     assert not uncovered, f"modules not assigned to a branch layer: {sorted(uncovered)}"
@@ -273,7 +283,9 @@ def test_troubleshooting_covers_the_known_failure_modes():
 def _collected_test_count() -> int:
     out = subprocess.run(
         [sys.executable, "-m", "pytest", "--collect-only", "-q", str(ROOT / "tests")],
-        capture_output=True, text=True, cwd=ROOT,
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
     ).stdout
     match = re.search(r"(\d+) tests? collected", out)
     assert match, f"could not read the collected test count:\n{out[-500:]}"
@@ -288,8 +300,14 @@ def test_documented_test_counts_are_accurate():
     """
     actual = _collected_test_count()
     wrong = []
-    for doc in ("README.md", "CONTRIBUTING.md", "docs/SETUP.md", "docs/EXTENDING.md",
-                "docs/INBOX_AGENT.md", "docs/DECISIONS.md"):
+    for doc in (
+        "README.md",
+        "CONTRIBUTING.md",
+        "docs/SETUP.md",
+        "docs/EXTENDING.md",
+        "docs/INBOX_AGENT.md",
+        "docs/DECISIONS.md",
+    ):
         for claimed in re.findall(r"(\d+)\s+(?:tests?|passed)\b", read(doc)):
             if int(claimed) != actual:
                 wrong.append(f"{doc} says {claimed}, actual is {actual}")

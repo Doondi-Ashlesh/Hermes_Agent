@@ -23,25 +23,34 @@ _SIGNALS: list[tuple[str, float, str, re.Pattern[str]]] = [
         "security",
         0.95,
         "Mentions account security or an unrecognized sign-in.",
-        re.compile(r"\b(sign-?in|password|breach|unauthori[sz]ed|rotate|2fa|verify your account)\b", re.I),
+        re.compile(
+            r"\b(sign-?in|password|breach|unauthori[sz]ed|rotate|2fa|verify your account)\b", re.I
+        ),
     ),
     (
         "billing",
         0.9,
         "Payment or billing action appears to be required.",
-        re.compile(r"\b(payment failed|past due|invoice|suspend(ed|ing)?|card (was )?declined)\b", re.I),
+        re.compile(
+            r"\b(payment failed|past due|invoice|suspend(ed|ing)?|card (was )?declined)\b", re.I
+        ),
     ),
     (
         "personal",
         0.8,
         "A person appears to be waiting on a reply or a decision.",
-        re.compile(r"\b(sign-?off|by (thursday|friday|monday|tomorrow|eod)|are you free|can you send|need your)\b", re.I),
+        re.compile(
+            r"\b(sign-?off|by (thursday|friday|monday|tomorrow|eod)|are you free|can you send|need your)\b",
+            re.I,
+        ),
     ),
     (
         "promotion",
         0.05,
         "Marketing copy with manufactured urgency.",
-        re.compile(r"\b(\d{1,3}% off|final hours|shop now|act now|biggest sale|free shipping)\b", re.I),
+        re.compile(
+            r"\b(\d{1,3}% off|final hours|shop now|act now|biggest sale|free shipping)\b", re.I
+        ),
     ),
     (
         "automated",

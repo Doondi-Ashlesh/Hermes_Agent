@@ -88,7 +88,7 @@ class ImapSource:
         date, so the window can be a little wider than asked for. Backfill
         deduplicates against the decision log, which makes that harmless.
         """
-        return self._fetch(f'(SINCE {since.strftime("%d-%b-%Y")})', limit)
+        return self._fetch(f"(SINCE {since.strftime('%d-%b-%Y')})", limit)
 
     def fetch_new(self, since_uid: str | None = None, limit: int = 25) -> list[Message]:
         criteria = f"(UID {int(since_uid) + 1}:*)" if since_uid else "(ALL)"
@@ -99,7 +99,9 @@ class ImapSource:
             conn.login(self.user, self.password)
             conn.select(self.folder, readonly=True)
 
-            status, data = conn.uid("SEARCH", criteria)  # imaplib skips a None charset; omitting it is identical
+            status, data = conn.uid(
+                "SEARCH", criteria
+            )  # imaplib skips a None charset; omitting it is identical
             if status != "OK" or not data or not data[0]:
                 return []
 

@@ -119,7 +119,9 @@ def test_unreachable_mailbox_fails(tmp_path, monkeypatch):
 
 
 def test_ollama_down_is_reported_with_the_fix(tmp_path, monkeypatch):
-    monkeypatch.setattr(doctor, "_reachable", lambda h, p, timeout=5.0: (False, "ConnectionRefusedError"))
+    monkeypatch.setattr(
+        doctor, "_reachable", lambda h, p, timeout=5.0: (False, "ConnectionRefusedError")
+    )
     report = doctor.run(configured(tmp_path, provider="ollama"), login=False)
     check = next(c for c in report.checks if c.name == "model provider")
     assert check.status == doctor.FAIL
@@ -219,7 +221,8 @@ def test_secrets_check_names_the_source_of_each(tmp_path, monkeypatch):
     monkeypatch.setattr("hermes_inbox.secrets.available", lambda: (False, "not installed"))
 
     detail = next(
-        c.detail for c in doctor.run(configured(tmp_path), login=False).checks
+        c.detail
+        for c in doctor.run(configured(tmp_path), login=False).checks
         if c.name == "secrets"
     )
     assert "ANTHROPIC_API_KEY ← environment" in detail

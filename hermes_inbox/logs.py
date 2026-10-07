@@ -26,9 +26,11 @@ from typing import Any
 LOGGER_NAME = "hermes_inbox"
 
 # Attributes present on every LogRecord; anything else was passed via `extra`.
-_STANDARD = frozenset(
-    logging.LogRecord("", 0, "", 0, "", (), None).__dict__
-) | {"message", "asctime", "taskName"}
+_STANDARD = frozenset(logging.LogRecord("", 0, "", 0, "", (), None).__dict__) | {
+    "message",
+    "asctime",
+    "taskName",
+}
 
 
 class TextFormatter(logging.Formatter):

@@ -146,7 +146,9 @@ def test_older_corrections_recover_their_headers_from_the_decision_log(store, tm
 
     live = bulk_message()
     log = DecisionLog(tmp_path / "decisions.jsonl")
-    log.append(Decision(live, Verdict(False, 0.6, "billing", "r"), GateDecision(False, "score<0.7")))
+    log.append(
+        Decision(live, Verdict(False, 0.6, "billing", "r"), GateDecision(False, "score<0.7"))
+    )
     legacy = Example.from_message(live, label=False)
     store.add(Example(**{**legacy.__dict__, "headers": {}}))  # as written before F-015
 

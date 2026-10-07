@@ -170,7 +170,9 @@ def isolated(tmp_path, monkeypatch):
 
 
 def seed(capsys):
-    main(["backfill", "--fixtures", "--console", "--provider", "offline", "--days", "36500", "--yes"])
+    main(
+        ["backfill", "--fixtures", "--console", "--provider", "offline", "--days", "36500", "--yes"]
+    )
     capsys.readouterr()
 
 
@@ -224,14 +226,19 @@ def test_list_before_anything_is_classified(capsys):
 
 def test_backfill_is_idempotent_through_the_cli(capsys):
     seed(capsys)
-    main(["backfill", "--fixtures", "--console", "--provider", "offline", "--days", "36500", "--yes"])
+    main(
+        ["backfill", "--fixtures", "--console", "--provider", "offline", "--days", "36500", "--yes"]
+    )
     assert "already classified" in capsys.readouterr().out
 
 
 def test_backfill_does_not_write_state_json(capsys):
     seed(capsys)
     data = Path(json.loads('"' + str(Path.cwd() / "data") + '"'))
-    assert not (data / "state.json").exists() or State(data / "state.json").last_uid("fixtures") is None
+    assert (
+        not (data / "state.json").exists()
+        or State(data / "state.json").last_uid("fixtures") is None
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -263,7 +270,9 @@ def test_parallel_and_serial_agree(tmp_path):
 
     assert (r1.fetched, r1.notified) == (r2.fetched, r2.notified)
     assert [d.message.uid for d in serial.log.all()] == [d.message.uid for d in parallel.log.all()]
-    assert [d.verdict.score for d in serial.log.all()] == [d.verdict.score for d in parallel.log.all()]
+    assert [d.verdict.score for d in serial.log.all()] == [
+        d.verdict.score for d in parallel.log.all()
+    ]
 
 
 def test_results_are_recorded_in_message_order_not_completion_order(tmp_path):
