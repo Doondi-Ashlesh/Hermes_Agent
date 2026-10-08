@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["anthropic>=1.0"]
+# Floors are tested, not assumed: CI's "minimum versions" job runs the suite on
+# exactly these. Ceilings stop the next major release arriving untested;
+# Dependabot proposes the bump, and the suite decides.
+dependencies = ["anthropic>=1.0,<2"]
 
 [project.optional-dependencies]
 # Lint and type tools are pinned exactly: a new release that adds a rule
@@ -18,7 +21,7 @@ dependencies = ["anthropic>=1.0"]
 dev = ["pytest>=8", "ruff==0.16.10", "mypy==2.4.0"]
 # Optional on purpose: there is no keychain on a headless server, which is where
 # this most often runs, so the agent must work without it.
-keyring = ["keyring>=25"]
+keyring = ["keyring>=25,<26"]
 
 [project.scripts]
 hermes-inbox = "hermes_inbox.cli:main"

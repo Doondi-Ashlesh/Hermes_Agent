@@ -1,0 +1,18 @@
+# Dependabot proposes updates; CI, including the oldest-versions job and the
+# audit, decides whether they land.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # Minor and patch bumps together, so a quiet week is one PR, not five.
+      # Majors stay separate: they cross a ceiling in pyproject.toml on purpose.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
