@@ -16,6 +16,11 @@ make demo      # end-to-end, no credentials
 make diagrams  # mermaid parses (needs node; CI runs it regardless)
 ```
 
+Dependency versions are bounded in `pyproject.toml`, and the lower bounds are
+tested: CI runs the suite on the oldest versions allowed. `pip-audit` scans
+dependencies for known vulnerabilities on every push and weekly; Dependabot
+proposes updates.
+
 CI runs all five on every push and pull request
 (`.github/workflows/ci.yml`), across Python 3.10-3.13. Green locally is not
 the same as green on a clean machine — that is what the matrix is for.

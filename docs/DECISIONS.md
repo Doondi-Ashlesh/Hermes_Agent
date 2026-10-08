@@ -140,6 +140,19 @@ needed quoting. Now a standing rule in `CONTRIBUTING.md`.
 
 ## Decisions
 
+### D-023 · Bounded, tested, audited dependencies
+**Why:** `anthropic>=1.0` accepted any future release, so a breaking 2.0 would have broken a
+fresh install with no change here; and nothing checked dependencies for known
+vulnerabilities.
+**Bounds:** `anthropic>=1.0,<2`, `keyring>=25,<26`. The floors were verified, not assumed:
+the suite passes on `anthropic==1.0.0` with `keyring==25.0.0`, and a CI job keeps running
+it there. Ceilings sit at the next major; Dependabot proposes the bump and CI decides.
+**Audit:** `pip-audit`, pinned, on every push and weekly, since a vulnerability is
+published against a dependency rather than a commit. Clean at the time of writing.
+**Rejected:** a lockfile. This is installed as a package, where exact pins would
+conflict with whatever else shares the environment; bounds plus a tested floor is the
+library-shaped answer. Revisit if it ever ships as a container image.
+
 ### D-022 · Lint and type-check in CI, with the tools pinned
 **Why:** the suite tested behaviour but nothing checked the code itself — the first gap a
 reviewer from a larger engineering org would see. `ruff` lints with an explicit rule set

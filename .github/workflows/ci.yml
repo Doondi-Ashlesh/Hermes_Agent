@@ -39,6 +39,29 @@ jobs:
           ANTHROPIC_AUTH_TOKEN: ""
         run: pytest tests/ -q
 
+  # The floors in pyproject.toml are claims; this is what makes them true.
+  # Keep these pins equal to the lower bounds there.
+  minimum-versions:
+    name: tests (oldest allowed deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install the oldest versions pyproject.toml allows
+        run: |
+          pip install -e ".[dev]"
+          pip install "anthropic==1.0.0" "keyring==25.0.0"
+
+      - name: Tests
+        env:
+          ANTHROPIC_API_KEY: ""
+          ANTHROPIC_AUTH_TOKEN: ""
+        run: pytest tests/ -q
+
   lint:
     name: lint and types
     runs-on: ubuntu-latest

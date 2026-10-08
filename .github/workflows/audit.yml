@@ -1,0 +1,41 @@
+name: Dependency audit
+
+# Separate from CI because a vulnerability is published against a dependency,
+# not against a commit: the weekly run catches the ones that appear while
+# nothing here changes.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays 06:17 UTC
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Audit exactly what a user installs, optional keychain included, and
+      # nothing else. Auditing the whole environment instead flags pip and
+      # setuptools from the runner image: not our dependencies, and red or
+      # green depending on which image GitHub happens to ship.
+      #   1. install the package   2. freeze its dependency set (freeze leaves
+      #   out pip/setuptools/wheel)   3. only then install the auditor, so its
+      #   own dependencies are not in the list   4. audit the list as pinned.
+      - name: Install
+        run: pip install -e ".[keyring]"
+
+      - name: Freeze the dependency set
+        run: pip freeze --exclude-editable | tee runtime-deps.txt
+
+      - name: Audit
+        run: |
+          pip install "pip-audit==2.10.1"
+          pip-audit -r runtime-deps.txt --no-deps --progress-spinner off
